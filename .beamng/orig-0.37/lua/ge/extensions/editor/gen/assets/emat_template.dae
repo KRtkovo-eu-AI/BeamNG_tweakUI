@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.0">
+    <asset>
+        <contributor>
+            <author/>
+            <authoring_tool>BeamNG.tech 0.36.0.0.18292 RELEASE x64 Object Exporter</authoring_tool>
+            <comments/>
+        </contributor>
+        <created>7/13/2025 11:36:03 AM</created>
+        <modified>7/13/2025 11:36:03 AM</modified>
+        <revision/>
+        <title/>
+        <subject/>
+        <keywords/>
+        <unit meter="1.000000"/>
+        <up_axis>Z_UP</up_axis>
+    </asset>
+    <library_images/>
+    <library_materials><material id="m_plaster_worn_01_bat-material" name="m_plaster_worn_01_bat"><instance_effect url="m_plaster_worn_01_bat-effect"/></material></library_materials>
+    <library_effects/>
+    <library_geometries>
+
+        <geometry id="gid" name="gnm">
+            <mesh>
+                <source id="id_v">
+                    <float_array id="id_va" count="678"/>
+                    <technique_common>
+                        <accessor source="#id_va" count="226" stride="3">
+                            <param name="X" type="float"/>
+                            <param name="Y" type="float"/>
+                            <param name="Z" type="float"/>
+                        </accessor>
+                    </technique_common>
+                </source>
+                <source id="id_n">
+                    <float_array id="id_na" count="3"/>
+                    <technique_common>
+                        <accessor source="#id_na" count="1" stride="3">
+                            <param name="X" type="float"/>
+                            <param name="Y" type="float"/>
+                            <param name="Z" type="float"/>
+                        </accessor>
+                    </technique_common>
+                </source>
+                <source id="id_uv">
+                    <float_array id="id_uva" count="2"/>
+                    <technique_common>
+                        <accessor source="#id_uva" count="1" stride="2">
+                            <param name="S" type="float"/>
+                            <param name="T" type="float"/>
+                        </accessor>
+                    </technique_common>
+                </source>
+                <vertices id="id_vp">
+                    <input semantic="POSITION" source="#id_v"/>
+                </vertices>
+                <triangles material="m_plaster_worn_01_bat-material" count="162">
+                    <input semantic="VERTEX" offset="0" source="#id_vp"/>
+                    <input semantic="NORMAL" offset="1" source="#id_n"/>
+                    <input semantic="TEXCOORD" offset="2" set="0" source="#id_uv"/>
+                    <p></p>
+                </triangles>
+            </mesh>
+        </geometry>
+
+    </library_geometries>
+    <library_visual_scenes>
+        <visual_scene id="RootNode" name="RootNode">
+            <node id="C:/proj/BeamNG/gameuser/0.36/levels/test_art_v2/bat/emat_2s.dae" name="C:/proj/BeamNG/gameuser/0.36/levels/test_art_v2/bat/emat_2s.dae">
+                <instance_geometry url="#C:/proj/BeamNG/gameuser/0.36/levels/test_art_v2/bat/emat_2s.dae-lib">
+                    <bind_material>
+                        <technique_common><instance_material target="#m_plaster_worn_01_bat-material" symbol="m_plaster_worn_01_bat-material"/></technique_common>
+                    </bind_material>
+                </instance_geometry>
+            </node>
+        </visual_scene>
+    </library_visual_scenes>
+    <scene>
+        <instance_visual_scene url="#RootNode"/>
+    </scene>
+</COLLADA>
