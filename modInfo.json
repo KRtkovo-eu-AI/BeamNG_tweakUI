@@ -1,0 +1,9 @@
+{
+  "Name": "Legacy Freeroam Vehicle Selector",
+  "Description": "Restores the classic 0.36 Freeroam vehicle selection dialog by redirecting the 0.37 vehicleSelector UI to the legacy menu.",
+  "Author": "BeamNG_tweakUI",
+  "Version": "1.0.0",
+  "GameVersion": "0.37",
+  "Type": "UI",
+  "Tags": ["ui", "vehicles", "freeroam"]
+}
