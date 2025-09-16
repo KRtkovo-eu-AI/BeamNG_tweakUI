@@ -1,12 +1,12 @@
 # Legacy Freeroam Vehicle Selector
 
-This mod restores the classic vehicle selection dialog that was used in BeamNG.drive 0.36 when playing in Freeroam. Version 0.37 replaced the pause-menu "Vehicles" option with the new `vehicleSelector` interface, which some players may not prefer. By re-enabling the legacy menu, pressing <kbd>Esc</kbd> and choosing **Vehicles** once again opens the familiar dialog from 0.36.
+This mod restores the classic vehicle selection dialog that was used in BeamNG.drive 0.36 when playing in Freeroam. Version 0.37 replaced the pause-menu "Vehicles" option with the new `vehicleSelector` interface, which some players may not prefer. Instead of forcing one or the other, the mod adds a choice dialog so that pressing <kbd>Esc</kbd> and selecting **Vehicles** lets you open either interface on demand.
 
 ## Features
 
-- Forces the game to open the legacy Freeroam vehicle selector dialog shipped with BeamNG.drive 0.36.
-- Redirects all Freeroam-specific entry points (including mod-filtered selectors) back to the legacy interface.
-- Leaves all other vehicle selector functionality untouched, allowing the game to continue using the newer systems where needed.
+- Adds a Freeroam-only prompt with two buttons: **Classic (0.36)** and **Modern (0.37)** vehicle selectors.
+- Keeps the stock BeamNG.drive 0.37 selector available for other game modes and for players who prefer the new UI.
+- Preserves the legacy 0.36 selector so long-time players can switch back instantly without disabling the mod.
 
 ## Installation
 
@@ -16,9 +16,9 @@ This mod restores the classic vehicle selection dialog that was used in BeamNG.d
 
 ## Notes
 
-- The legacy dialog does not support the additional filtering options introduced by the new `vehicleSelector`. When the game requests a filtered list (e.g., "mods only"), the legacy window is opened instead and the request is logged in the console.
-- The original 0.37 vehicle selector remains untouched for other game modes that still rely on it.
-- If the mod is disabled or removed, the game will revert to using the new selector on the next launch.
+- The choice dialog appears whenever Freeroam asks for a vehicle selector (pause menu, quick access, or `Ctrl` + `E`). Pick **Classic (0.36)** to open the legacy window, or **Modern (0.37)** to use BeamNG.drive's current UI.
+- If the game requests a filtered selector (e.g., "mods only"), the prompt explains that the legacy UI ignores the filter. Choosing the modern selector honours the request.
+- Disabling or removing the mod restores the default behaviour on the next launch.
 
 ## Troubleshooting
 
