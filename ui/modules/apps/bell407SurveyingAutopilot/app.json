@@ -1,0 +1,19 @@
+{
+  "name": "Bell 407 Survey Autopilot",
+  "author": "BeamNG",
+  "version": "0.1.0",
+  "description": "Controls and preview for the Bell 407 surveying autopilot.",
+  "directive": "bell407SurveyingAutopilot",
+  "css": {
+    "left": "420px",
+    "top": "160px",
+    "width": "720px",
+    "height": "420px",
+    "min-width": "420px",
+    "min-height": "320px"
+  },
+  "types": [
+    "ui.apps.categories.vehicle_control",
+    "ui.apps.categories.vehicle_info"
+  ]
+}
