@@ -74,6 +74,10 @@ local controlBindings = {
         yaw = {input = "b407_yaw", electric = "b407_yaw_input"}
 }
 
+local controlDirections = {lift = 1, pitch = 1, roll = 1, yaw = 1}
+
+local liftOrientationState = {locked = false, failTimer = 0, successTimer = 0, lastAltitude = nil}
+
 local planIdCounter = 0
 
 local function copyVec3(vec)
@@ -115,7 +119,8 @@ local function applyControlOutput(controlName, value)
                 return
         end
 
-        local clampedValue = clamp(value or 0, -1, 1)
+        local direction = controlDirections[controlName] or 1
+        local clampedValue = clamp((value or 0) * direction, -1, 1)
         lastOutputs[controlName] = clampedValue
 
         if input and input.event then
@@ -156,6 +161,13 @@ local function getVelocityComponents()
         return 0, 0, 0
 end
 
+local function resetLiftOrientationTracking()
+        liftOrientationState.failTimer = 0
+        liftOrientationState.successTimer = 0
+        liftOrientationState.lastAltitude = nil
+        liftOrientationState.locked = (controlDirections.lift ~= 1)
+end
+
 local function resetControllers()
         pitchPID:reset()
         rollPID:reset()
@@ -166,6 +178,8 @@ local function resetControllers()
         rollSmoother:reset()
         yawSmoother:reset()
         altitudeSmoother:reset()
+
+        resetLiftOrientationTracking()
 end
 
 local function releaseControls()
@@ -451,6 +465,75 @@ local function getHeadingToTarget(currentPos, targetPos)
         return math.atan2(dy, dx)
 end
 
+local function updateLiftOrientation(command, targetAltitude, currentAltitude, verticalVelocity, dt)
+        liftOrientationState.lastAltitude = currentAltitude or liftOrientationState.lastAltitude
+
+        if liftOrientationState.locked then
+                return
+        end
+
+        if not targetAltitude or not currentAltitude then
+                resetLiftOrientationTracking()
+                return
+        end
+
+        local altitudeError = targetAltitude - currentAltitude
+        local absCommand = math.abs(command or 0)
+
+        if absCommand < 0.3 or math.abs(altitudeError) < 0.5 then
+                liftOrientationState.failTimer = math.max(0, liftOrientationState.failTimer - dt)
+                liftOrientationState.successTimer = math.max(0, liftOrientationState.successTimer - dt)
+                liftOrientationState.lastAltitude = currentAltitude
+                return
+        end
+
+        local desiredDir = command >= 0 and 1 or -1
+
+        if altitudeError * desiredDir <= 0 then
+                liftOrientationState.failTimer = math.max(0, liftOrientationState.failTimer - dt)
+                liftOrientationState.successTimer = math.max(0, liftOrientationState.successTimer - dt)
+                liftOrientationState.lastAltitude = currentAltitude
+                return
+        end
+
+        local effectiveVelocity = verticalVelocity or 0
+
+        if liftOrientationState.lastAltitude then
+                local altitudeDelta = currentAltitude - liftOrientationState.lastAltitude
+                if math.abs(altitudeDelta) > 1e-4 then
+                        local derivedVelocity = altitudeDelta / math.max(dt, 1e-3)
+                        if math.abs(derivedVelocity) > math.abs(effectiveVelocity) then
+                                effectiveVelocity = derivedVelocity
+                        end
+                end
+        end
+
+        liftOrientationState.lastAltitude = currentAltitude
+
+        if effectiveVelocity * desiredDir < -0.1 then
+                liftOrientationState.failTimer = liftOrientationState.failTimer + dt
+                liftOrientationState.successTimer = math.max(0, liftOrientationState.successTimer - dt * 0.5)
+                if liftOrientationState.failTimer > 0.35 then
+                        controlDirections.lift = -controlDirections.lift
+                        liftOrientationState.locked = true
+                        liftOrientationState.failTimer = 0
+                        liftOrientationState.successTimer = 0
+                        markStatusEvent("liftOrientation", {direction = controlDirections.lift})
+                end
+        elseif effectiveVelocity * desiredDir > 0.05 then
+                liftOrientationState.successTimer = liftOrientationState.successTimer + dt
+                liftOrientationState.failTimer = math.max(0, liftOrientationState.failTimer - dt * 0.5)
+                if liftOrientationState.successTimer > 0.4 then
+                        liftOrientationState.locked = true
+                        liftOrientationState.failTimer = 0
+                        liftOrientationState.successTimer = 0
+                end
+        else
+                liftOrientationState.failTimer = math.max(0, liftOrientationState.failTimer - dt * 0.5)
+                liftOrientationState.successTimer = math.max(0, liftOrientationState.successTimer - dt * 0.5)
+        end
+end
+
 local function controlToTarget(dt)
         if not currentTargetPos or not obj then
                 return
@@ -459,7 +542,7 @@ local function controlToTarget(dt)
         local pos = obj:getPosition()
         if not pos then return end
 
-        local velXRaw, velYRaw = getVelocityComponents()
+        local velXRaw, velYRaw, velZRaw = getVelocityComponents()
         local roll, pitch, yaw = obj:getRollPitchYaw()
 
         local yawSmoothed = yawSmoother:get(yaw, dt)
@@ -521,6 +604,8 @@ local function controlToTarget(dt)
                 local yawOut = yawPID:get(yawSmoothed, yawSetpoint, dt)
                 yawOutput = clamp(yawOut, -1, 1)
         end
+
+        updateLiftOrientation(liftOutput, currentTargetPos.z, altitude, velZRaw, dt)
 
         applyControlOutput("lift", liftOutput)
         applyControlOutput("pitch", pitchOutput)
