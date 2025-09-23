@@ -113,14 +113,27 @@ local defaultControlContext = {
         yawRateDamping = 0.12,
         forwardAccelDamping = 0.022,
         lateralAccelDamping = 0.022,
-        verticalAccelDamping = 0.08
+        verticalAccelDamping = 0.08,
+        pitchGuardLimit = 0.26,
+        rollGuardLimit = 0.26,
+        yawGuardLimit = 0.55,
+        pitchGuardStrength = 0.6,
+        rollGuardStrength = 0.6,
+        yawGuardStrength = 0.42,
+        pitchGuardRate = 1.2,
+        rollGuardRate = 1.2,
+        yawGuardRate = 1.6,
+        verticalHoldFactor = 1,
+        verticalHoldThreshold = nil,
+        lockHeadingWhenVertical = false,
+        recoveryHorizontalFactor = 0.15
 }
 
 local stateControlContexts = {}
 
 stateControlContexts[states.takeoff] = {
         maxTilt = 0.18,
-        yawClamp = 0.32,
+        yawClamp = 0.18,
         altitudeFocus = 1.0,
         altitudeRange = 12,
         minHorizontal = 0.0,
@@ -137,7 +150,20 @@ stateControlContexts[states.takeoff] = {
         yawRateDamping = 0.14,
         forwardAccelDamping = 0.03,
         lateralAccelDamping = 0.03,
-        verticalAccelDamping = 0.12
+        verticalAccelDamping = 0.12,
+        verticalHoldThreshold = 4,
+        verticalHoldFactor = 0,
+        lockHeadingWhenVertical = true,
+        pitchGuardLimit = 0.18,
+        rollGuardLimit = 0.18,
+        yawGuardLimit = 0.3,
+        pitchGuardStrength = 0.75,
+        rollGuardStrength = 0.75,
+        yawGuardStrength = 0.55,
+        pitchGuardRate = 0.9,
+        rollGuardRate = 0.9,
+        yawGuardRate = 0.8,
+        recoveryHorizontalFactor = 0
 }
 
 stateControlContexts[states.transitStart] = {
@@ -299,6 +325,89 @@ local function clamp(val, min, max)
         if val < min then return min end
         if val > max then return max end
         return val
+end
+
+local function getContextValue(context, key)
+        if context and context[key] ~= nil then
+                return context[key]
+        end
+        return defaultControlContext[key]
+end
+
+local function applyAxisGuard(output, angle, rate, limit, rateLimit, strength)
+        if not strength or strength <= 0 then
+                return output
+        end
+
+        if not limit or limit <= 0 then
+                return output
+        end
+
+        local currentAngle = angle or 0
+        local absAngle = math.abs(currentAngle)
+        if absAngle <= limit then
+                return output
+        end
+
+        local direction = currentAngle >= 0 and 1 or -1
+        local normalizedAngle = math.min(1, (absAngle - limit) / math.max(limit, 1e-3))
+        local correction = strength * normalizedAngle
+
+        if rateLimit and rateLimit > 0 then
+                local absRate = math.abs(rate or 0)
+                if absRate > rateLimit then
+                        correction = correction + (strength * 0.5) * math.min(1, (absRate - rateLimit) / math.max(rateLimit, 1e-3))
+                end
+        end
+
+        if correction <= 0 then
+                return output
+        end
+
+        if output * direction > 0 then
+                output = output * (1 - math.min(0.85, correction))
+        end
+
+        return clamp(output - direction * correction, -1, 1)
+end
+
+local function applyYawGuard(output, yawError, yawRate, limit, rateLimit, strength)
+        if not strength or strength <= 0 then
+                return output
+        end
+
+        local correction = 0
+        local direction = 0
+
+        if limit and limit > 0 then
+                local currentError = yawError or 0
+                local absError = math.abs(currentError)
+                if absError > limit then
+                        direction = currentError >= 0 and 1 or -1
+                        correction = correction + strength * math.min(1, (absError - limit) / math.max(limit, 1e-3))
+                end
+        end
+
+        if rateLimit and rateLimit > 0 then
+                local currentRate = yawRate or 0
+                local absRate = math.abs(currentRate)
+                if absRate > rateLimit then
+                        if direction == 0 then
+                                direction = currentRate >= 0 and 1 or -1
+                        end
+                        correction = correction + (strength * 0.5) * math.min(1, (absRate - rateLimit) / math.max(rateLimit, 1e-3))
+                end
+        end
+
+        if correction == 0 or direction == 0 then
+                return output
+        end
+
+        if output * direction > 0 then
+                output = output * (1 - math.min(0.85, correction))
+        end
+
+        return clamp(output - direction * correction, -1, 1)
 end
 
 local function applyControlOutput(controlName, value, dt)
@@ -495,11 +604,21 @@ local function setState(newState, reason)
         elseif newState == states.takeoff then
                 resetControllers()
                 local pos = obj and obj.getPosition and obj:getPosition()
+                local planHeading = plan and plan.startHeading or currentTargetHeading
                 if pos then
                         takeoffAnchor = {x = pos.x, y = pos.y, z = plan and plan.altitude or pos.z}
                         currentTargetPos = {x = takeoffAnchor.x, y = takeoffAnchor.y, z = plan and plan.altitude or pos.z}
                 end
-                currentTargetHeading = plan and plan.startHeading or currentTargetHeading
+                if obj and obj.getRollPitchYaw then
+                        local _, _, currentYaw = obj:getRollPitchYaw()
+                        if currentYaw then
+                                currentTargetHeading = currentYaw
+                        else
+                                currentTargetHeading = planHeading
+                        end
+                else
+                        currentTargetHeading = planHeading
+                end
                 currentTargetSpeed = 0
         elseif newState == states.transitStart then
                 resetControllers()
@@ -789,13 +908,26 @@ local function controlToTarget(dt, context)
         local pitchRateRaw = 0
         local rollRateRaw = 0
         local yawRateRaw = 0
-        if kinematicHistory.pitch then
+        local rollAV, pitchAV, yawAV
+        if obj.getRollPitchYawAngularVelocity then
+                rollAV, pitchAV, yawAV = obj:getRollPitchYawAngularVelocity()
+        end
+
+        if pitchAV ~= nil then
+                pitchRateRaw = pitchAV or 0
+        elseif kinematicHistory.pitch then
                 pitchRateRaw = normalizeAngle(pitch - kinematicHistory.pitch) / dtSafe
         end
-        if kinematicHistory.roll then
+
+        if rollAV ~= nil then
+                rollRateRaw = rollAV or 0
+        elseif kinematicHistory.roll then
                 rollRateRaw = normalizeAngle(roll - kinematicHistory.roll) / dtSafe
         end
-        if kinematicHistory.yaw then
+
+        if yawAV ~= nil then
+                yawRateRaw = yawAV or 0
+        elseif kinematicHistory.yaw then
                 yawRateRaw = normalizeAngle(yaw - kinematicHistory.yaw) / dtSafe
         end
 
@@ -818,6 +950,19 @@ local function controlToTarget(dt, context)
         local levelComp = context.levelCompensation or defaultControlContext.levelCompensation or 0
         local verticalDampingGain = context.verticalDamping or defaultControlContext.verticalDamping
         local verticalClamp = context.verticalClamp or defaultControlContext.verticalClamp or 0.28
+        local pitchGuardLimit = getContextValue(context, "pitchGuardLimit")
+        local rollGuardLimit = getContextValue(context, "rollGuardLimit")
+        local yawGuardLimit = getContextValue(context, "yawGuardLimit")
+        local pitchGuardStrength = getContextValue(context, "pitchGuardStrength")
+        local rollGuardStrength = getContextValue(context, "rollGuardStrength")
+        local yawGuardStrength = getContextValue(context, "yawGuardStrength")
+        local pitchGuardRate = getContextValue(context, "pitchGuardRate")
+        local rollGuardRate = getContextValue(context, "rollGuardRate")
+        local yawGuardRate = getContextValue(context, "yawGuardRate")
+        local lockHeading = getContextValue(context, "lockHeadingWhenVertical")
+        local verticalHoldThreshold = getContextValue(context, "verticalHoldThreshold")
+        local verticalHoldFactor = getContextValue(context, "verticalHoldFactor")
+        local recoveryHorizontalFactor = getContextValue(context, "recoveryHorizontalFactor")
 
         local altOutput = liftPID:get(altitude, currentTargetPos.z, dt)
 
@@ -879,6 +1024,23 @@ local function controlToTarget(dt, context)
                 end
         end
 
+        if verticalHoldThreshold and math.abs(altitudeError) > verticalHoldThreshold then
+                local holdFactor = verticalHoldFactor
+                if holdFactor == nil then
+                        holdFactor = 0
+                end
+                horizontalFactor = math.min(horizontalFactor, holdFactor)
+        end
+
+        if recoveryHorizontalFactor then
+                if pitchGuardLimit and math.abs(pitchSmoothed) > pitchGuardLimit then
+                        horizontalFactor = math.min(horizontalFactor, recoveryHorizontalFactor)
+                end
+                if rollGuardLimit and math.abs(rollSmoothed) > rollGuardLimit then
+                        horizontalFactor = math.min(horizontalFactor, recoveryHorizontalFactor)
+                end
+        end
+
         desiredSpeed = desiredSpeed * horizontalFactor
         desiredVelX = desiredVelX * horizontalFactor
         desiredVelY = desiredVelY * horizontalFactor
@@ -904,6 +1066,10 @@ local function controlToTarget(dt, context)
                 targetHeading = getHeadingToTarget(pos, currentTargetPos)
         end
 
+        if lockHeading and horizontalFactor <= 1e-3 then
+                targetHeading = yawSmoothed
+        end
+
         local verticalDamping = clamp(-velZRaw * (verticalDampingGain or 0.12), -verticalClamp, verticalClamp)
         local verticalAccelGain = context.verticalAccelDamping or defaultControlContext.verticalAccelDamping or 0
         if verticalAccelGain ~= 0 then
@@ -915,9 +1081,11 @@ local function controlToTarget(dt, context)
         local pitchOutput = clamp(pitchOut, -1, 1)
         local rollOutput = clamp(rollOut, -1, 1)
         local yawOutput = lastOutputs.yaw or 0
+        local yawSetpointError = 0
 
         if targetHeading then
                 local yawSetpoint = yaw + clamp(normalizeAngle(targetHeading - yaw), -yawClamp, yawClamp)
+                yawSetpointError = normalizeAngle(yawSetpoint - yawSmoothed)
                 local yawOut = yawPID:get(yawSmoothed, yawSetpoint, dt)
                 yawOutput = clamp(yawOut, -1, 1)
         end
@@ -948,6 +1116,10 @@ local function controlToTarget(dt, context)
                 local damp = clamp(accelLateral * lateralAccelGain, -0.4, 0.4)
                 rollOutput = clamp(rollOutput - damp, -1, 1)
         end
+
+        pitchOutput = applyAxisGuard(pitchOutput, pitchSmoothed, pitchRate, pitchGuardLimit, pitchGuardRate, pitchGuardStrength)
+        rollOutput = applyAxisGuard(rollOutput, rollSmoothed, rollRate, rollGuardLimit, rollGuardRate, rollGuardStrength)
+        yawOutput = applyYawGuard(yawOutput, yawSetpointError, yawRate, yawGuardLimit, yawGuardRate, yawGuardStrength)
 
         updateLiftOrientation(liftOutput, currentTargetPos.z, altitude, velZRaw, dt)
 
