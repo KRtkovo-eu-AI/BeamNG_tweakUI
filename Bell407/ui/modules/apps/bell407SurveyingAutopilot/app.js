@@ -205,6 +205,17 @@ angular.module('beamng.apps')
         }
       }
 
+      function withFlightAltitude(point, fallbackZ) {
+        const clone = clonePoint(point)
+        if (!clone) return null
+        const reference = fallbackZ !== undefined ? fallbackZ : (clone.z || 0)
+        const altitude = toNumber($scope.params && $scope.params.altitude, reference)
+        if (Number.isFinite(altitude)) {
+          clone.z = altitude
+        }
+        return clone
+      }
+
       function cloneBounds(source) {
         if (!source || typeof source !== 'object') return null
         const minX = toNumber(source.minX, NaN)
@@ -242,7 +253,8 @@ angular.module('beamng.apps')
         $scope.homePoint = point
 
         if ((!$scope.startPoint && (options ? options.setStartIfMissing !== false : true)) || (options && options.forceStart)) {
-          $scope.startPoint = clonePoint(point)
+          const adjusted = withFlightAltitude(point, point.z)
+          $scope.startPoint = adjusted || clonePoint(point)
         }
 
         if (!options || options.updateStatus !== false) {
@@ -786,11 +798,8 @@ angular.module('beamng.apps')
           $scope.$evalAsync(function () {
             $scope.loadingStart = false
             if (result && (result.x || result[1])) {
-              const point = clonePoint(result)
-              if (point && !Number.isFinite(point.z)) {
-                point.z = toNumber($scope.params.altitude, 0)
-              }
-              $scope.startPoint = point
+              const point = withFlightAltitude(result)
+              $scope.startPoint = point || clonePoint(result)
               queuePreview()
               scheduleDraw()
             } else {

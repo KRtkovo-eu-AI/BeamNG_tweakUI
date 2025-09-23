@@ -48,6 +48,12 @@ local pitchSmoother = newTemporalSmoothingNonLinear(6)
 local rollSmoother = newTemporalSmoothingNonLinear(6)
 local yawSmoother = newTemporalSmoothingNonLinear(6)
 local altitudeSmoother = newTemporalSmoothingNonLinear(10)
+local pitchRateSmoother = newTemporalSmoothingNonLinear(6)
+local rollRateSmoother = newTemporalSmoothingNonLinear(6)
+local yawRateSmoother = newTemporalSmoothingNonLinear(6)
+local accelSmootherX = newTemporalSmoothingNonLinear(8)
+local accelSmootherY = newTemporalSmoothingNonLinear(8)
+local accelSmootherZ = newTemporalSmoothingNonLinear(8)
 
 local rotorSpinThreshold = 380
 local rotorStableTime = 1.5
@@ -84,6 +90,7 @@ local controlBindings = {
 local controlDirections = {lift = 1, pitch = 1, roll = 1, yaw = 1}
 
 local liftOrientationState = {locked = false, failTimer = 0, successTimer = 0, lastAltitude = nil, lastAltitudeError = nil}
+local kinematicHistory = {pitch = nil, roll = nil, yaw = nil, velX = nil, velY = nil, velZ = nil}
 
 local planIdCounter = 0
 
@@ -100,7 +107,13 @@ local defaultControlContext = {
         levelCompensation = 0.2,
         verticalDamping = 0.12,
         verticalClamp = 0.28,
-        headingTolerance = 0.18
+        headingTolerance = 0.18,
+        pitchRateDamping = 0.18,
+        rollRateDamping = 0.18,
+        yawRateDamping = 0.12,
+        forwardAccelDamping = 0.022,
+        lateralAccelDamping = 0.022,
+        verticalAccelDamping = 0.08
 }
 
 local stateControlContexts = {}
@@ -118,7 +131,13 @@ stateControlContexts[states.takeoff] = {
         levelCompensation = 0.24,
         verticalDamping = 0.1,
         verticalClamp = 0.24,
-        headingTolerance = 0.18
+        headingTolerance = 0.18,
+        pitchRateDamping = 0.22,
+        rollRateDamping = 0.22,
+        yawRateDamping = 0.14,
+        forwardAccelDamping = 0.03,
+        lateralAccelDamping = 0.03,
+        verticalAccelDamping = 0.12
 }
 
 stateControlContexts[states.transitStart] = {
@@ -134,7 +153,10 @@ stateControlContexts[states.transitStart] = {
         levelCompensation = 0.2,
         verticalDamping = 0.12,
         verticalClamp = 0.28,
-        headingTolerance = 0.18
+        headingTolerance = 0.18,
+        pitchRateDamping = 0.18,
+        rollRateDamping = 0.18,
+        yawRateDamping = 0.12
 }
 
 stateControlContexts[states.holding] = {
@@ -150,7 +172,12 @@ stateControlContexts[states.holding] = {
         levelCompensation = 0.22,
         verticalDamping = 0.12,
         verticalClamp = 0.26,
-        headingTolerance = 0.14
+        headingTolerance = 0.14,
+        pitchRateDamping = 0.2,
+        rollRateDamping = 0.2,
+        yawRateDamping = 0.12,
+        forwardAccelDamping = 0.028,
+        lateralAccelDamping = 0.028
 }
 
 stateControlContexts[states.pattern] = {
@@ -166,7 +193,10 @@ stateControlContexts[states.pattern] = {
         levelCompensation = 0.18,
         verticalDamping = 0.13,
         verticalClamp = 0.3,
-        headingTolerance = 0.18
+        headingTolerance = 0.18,
+        pitchRateDamping = 0.17,
+        rollRateDamping = 0.17,
+        yawRateDamping = 0.12
 }
 
 stateControlContexts[states.returnStart] = {
@@ -182,7 +212,10 @@ stateControlContexts[states.returnStart] = {
         levelCompensation = 0.2,
         verticalDamping = 0.12,
         verticalClamp = 0.28,
-        headingTolerance = 0.16
+        headingTolerance = 0.16,
+        pitchRateDamping = 0.18,
+        rollRateDamping = 0.18,
+        yawRateDamping = 0.12
 }
 
 stateControlContexts[states.returnHome] = stateControlContexts[states.returnStart]
@@ -200,7 +233,13 @@ stateControlContexts[states.finishHover] = {
         levelCompensation = 0.24,
         verticalDamping = 0.12,
         verticalClamp = 0.26,
-        headingTolerance = 0.14
+        headingTolerance = 0.14,
+        pitchRateDamping = 0.22,
+        rollRateDamping = 0.22,
+        yawRateDamping = 0.12,
+        forwardAccelDamping = 0.03,
+        lateralAccelDamping = 0.03,
+        verticalAccelDamping = 0.12
 }
 
 stateControlContexts[states.landing] = {
@@ -216,7 +255,13 @@ stateControlContexts[states.landing] = {
         levelCompensation = 0.24,
         verticalDamping = 0.18,
         verticalClamp = 0.3,
-        headingTolerance = 0.16
+        headingTolerance = 0.16,
+        pitchRateDamping = 0.24,
+        rollRateDamping = 0.24,
+        yawRateDamping = 0.14,
+        forwardAccelDamping = 0.03,
+        lateralAccelDamping = 0.03,
+        verticalAccelDamping = 0.14
 }
 
 local function getControlContextForState(stateName)
@@ -326,6 +371,15 @@ local function resetLiftOrientationTracking(forceDirection)
         end
 end
 
+local function resetKinematicHistory()
+        kinematicHistory.pitch = nil
+        kinematicHistory.roll = nil
+        kinematicHistory.yaw = nil
+        kinematicHistory.velX = nil
+        kinematicHistory.velY = nil
+        kinematicHistory.velZ = nil
+end
+
 local function resetControllers(forceDefaultLift)
         pitchPID:reset()
         rollPID:reset()
@@ -336,8 +390,15 @@ local function resetControllers(forceDefaultLift)
         rollSmoother:reset()
         yawSmoother:reset()
         altitudeSmoother:reset()
+        pitchRateSmoother:reset()
+        rollRateSmoother:reset()
+        yawRateSmoother:reset()
+        accelSmootherX:reset()
+        accelSmootherY:reset()
+        accelSmootherZ:reset()
 
         resetLiftOrientationTracking(forceDefaultLift and 1 or nil)
+        resetKinematicHistory()
         lastOutputs.lift = 0
         lastOutputs.pitch = 0
         lastOutputs.roll = 0
@@ -439,7 +500,7 @@ local function setState(newState, reason)
                         currentTargetPos = {x = takeoffAnchor.x, y = takeoffAnchor.y, z = plan and plan.altitude or pos.z}
                 end
                 currentTargetHeading = plan and plan.startHeading or currentTargetHeading
-                currentTargetSpeed = plan and plan.speed * 0.25 or 0
+                currentTargetSpeed = 0
         elseif newState == states.transitStart then
                 resetControllers()
                 currentTargetPos = plan and copyVec3(plan.start) or nil
@@ -723,6 +784,28 @@ local function controlToTarget(dt, context)
         local yawSmoothed = yawSmoother:get(yaw, dt)
         local pitchSmoothed = pitchSmoother:get(pitch, dt)
         local rollSmoothed = rollSmoother:get(roll, dt)
+        local dtSafe = math.max(dt or 0, 1e-3)
+
+        local pitchRateRaw = 0
+        local rollRateRaw = 0
+        local yawRateRaw = 0
+        if kinematicHistory.pitch then
+                pitchRateRaw = normalizeAngle(pitch - kinematicHistory.pitch) / dtSafe
+        end
+        if kinematicHistory.roll then
+                rollRateRaw = normalizeAngle(roll - kinematicHistory.roll) / dtSafe
+        end
+        if kinematicHistory.yaw then
+                yawRateRaw = normalizeAngle(yaw - kinematicHistory.yaw) / dtSafe
+        end
+
+        local pitchRate = pitchRateSmoother:get(pitchRateRaw, dt)
+        local rollRate = rollRateSmoother:get(rollRateRaw, dt)
+        local yawRate = yawRateSmoother:get(yawRateRaw, dt)
+
+        kinematicHistory.pitch = pitch
+        kinematicHistory.roll = roll
+        kinematicHistory.yaw = yaw
         local altitude = altitudeSmoother:get(pos.z, dt)
 
         context = context or getControlContextForState(state)
@@ -749,6 +832,22 @@ local function controlToTarget(dt, context)
 
         local velX =  cosYaw * velXRaw + sinYaw * velYRaw
         local velY = -sinYaw * velXRaw + cosYaw * velYRaw
+
+        local accelXRaw = 0
+        local accelYRaw = 0
+        local accelZRaw = 0
+        if kinematicHistory.velX then
+                accelXRaw = (velXRaw - kinematicHistory.velX) / dtSafe
+                accelYRaw = (velYRaw - kinematicHistory.velY) / dtSafe
+                accelZRaw = (velZRaw - kinematicHistory.velZ) / dtSafe
+        end
+        kinematicHistory.velX = velXRaw
+        kinematicHistory.velY = velYRaw
+        kinematicHistory.velZ = velZRaw
+
+        local accelForward = accelSmootherX:get(cosYaw * accelXRaw + sinYaw * accelYRaw, dt)
+        local accelLateral = accelSmootherY:get(-sinYaw * accelXRaw + cosYaw * accelYRaw, dt)
+        local accelVertical = accelSmootherZ:get(accelZRaw, dt)
 
         local dist2 = math.sqrt(localX * localX + localY * localY)
         local desiredSpeed = currentTargetSpeed or 0
@@ -806,6 +905,12 @@ local function controlToTarget(dt, context)
         end
 
         local verticalDamping = clamp(-velZRaw * (verticalDampingGain or 0.12), -verticalClamp, verticalClamp)
+        local verticalAccelGain = context.verticalAccelDamping or defaultControlContext.verticalAccelDamping or 0
+        if verticalAccelGain ~= 0 then
+                local damp = clamp(accelVertical * verticalAccelGain, -verticalClamp, verticalClamp)
+                verticalDamping = clamp(verticalDamping - damp, -verticalClamp, verticalClamp)
+        end
+
         local liftOutput = clamp(altOutput + verticalDamping, -1, 1)
         local pitchOutput = clamp(pitchOut, -1, 1)
         local rollOutput = clamp(rollOut, -1, 1)
@@ -815,6 +920,33 @@ local function controlToTarget(dt, context)
                 local yawSetpoint = yaw + clamp(normalizeAngle(targetHeading - yaw), -yawClamp, yawClamp)
                 local yawOut = yawPID:get(yawSmoothed, yawSetpoint, dt)
                 yawOutput = clamp(yawOut, -1, 1)
+        end
+
+        local pitchRateGain = context.pitchRateDamping or defaultControlContext.pitchRateDamping or 0
+        local rollRateGain = context.rollRateDamping or defaultControlContext.rollRateDamping or 0
+        local yawRateGain = context.yawRateDamping or defaultControlContext.yawRateDamping or 0
+        if pitchRateGain ~= 0 then
+                local damp = clamp(pitchRate * pitchRateGain, -0.6, 0.6)
+                pitchOutput = clamp(pitchOutput - damp, -1, 1)
+        end
+        if rollRateGain ~= 0 then
+                local damp = clamp(rollRate * rollRateGain, -0.6, 0.6)
+                rollOutput = clamp(rollOutput - damp, -1, 1)
+        end
+        if yawRateGain ~= 0 then
+                local damp = clamp(yawRate * yawRateGain, -0.6, 0.6)
+                yawOutput = clamp(yawOutput - damp, -1, 1)
+        end
+
+        local forwardAccelGain = context.forwardAccelDamping or defaultControlContext.forwardAccelDamping or 0
+        local lateralAccelGain = context.lateralAccelDamping or defaultControlContext.lateralAccelDamping or 0
+        if forwardAccelGain ~= 0 then
+                local damp = clamp(accelForward * forwardAccelGain, -0.4, 0.4)
+                pitchOutput = clamp(pitchOutput - damp, -1, 1)
+        end
+        if lateralAccelGain ~= 0 then
+                local damp = clamp(accelLateral * lateralAccelGain, -0.4, 0.4)
+                rollOutput = clamp(rollOutput - damp, -1, 1)
         end
 
         updateLiftOrientation(liftOutput, currentTargetPos.z, altitude, velZRaw, dt)
