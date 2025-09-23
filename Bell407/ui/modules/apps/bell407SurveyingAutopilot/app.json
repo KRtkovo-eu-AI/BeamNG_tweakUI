@@ -3,6 +3,7 @@
   "author": "BeamNG",
   "version": "0.1.0",
   "description": "Controls and preview for the Bell 407 surveying autopilot.",
+  "domElement": "<bell407-surveying-autopilot></bell407-surveying-autopilot>",
   "directive": "bell407SurveyingAutopilot",
   "css": {
     "left": "420px",
