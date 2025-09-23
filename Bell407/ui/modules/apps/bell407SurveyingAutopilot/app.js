@@ -114,6 +114,7 @@ angular.module('beamng.apps')
       let pendingInstallCheck = null
       let installCheckAttempts = 0
       let homeSyncInFlight = false
+      let lastPreviewId = null
 
       const mapState = {
         canvas: null,
@@ -633,11 +634,7 @@ angular.module('beamng.apps')
           previewDebounce = null
           const payload = buildPayload()
           if (!payload) {
-            $scope.previewPending = false
-            $scope.previewReady = false
-            $scope.previewError = 'Select a start point or sync the home position first.'
-            patternGeometry.points = []
-            scheduleDraw()
+            handlePreviewFailure('Select a start point or sync the home position first.')
             return
           }
           const signature = payloadSignature(payload)
@@ -647,9 +644,16 @@ angular.module('beamng.apps')
           $scope.previewError = null
           autopilotCommand('previewPattern', payload, function (result) {
             $scope.$evalAsync(function () {
-              if (result === false && !$scope.previewReady) {
-                $scope.previewPending = false
-                $scope.previewError = 'Preview request rejected by autopilot.'
+              if (result === false) {
+                handlePreviewFailure('Preview request rejected by autopilot.')
+                return
+              }
+              if (typeof result === 'string') {
+                handlePreviewFailure(result)
+                return
+              }
+              if (result && typeof result === 'object') {
+                applyPreviewData(result, { force: true })
               }
             })
           })
@@ -676,6 +680,69 @@ angular.module('beamng.apps')
         if (!patternGeometry.start && patternGeometry.points.length > 0) {
           patternGeometry.start = clonePoint(patternGeometry.points[0])
         }
+      }
+
+      function handlePreviewFailure(message) {
+        $scope.previewPending = false
+        $scope.previewReady = false
+        $scope.previewError = message || 'Unable to compute preview.'
+        lastPreviewId = null
+        patternGeometry.points = []
+        patternGeometry.mapSegments = []
+        patternGeometry.bounds = null
+        scheduleDraw()
+      }
+
+      function updatePreviewFromData(data) {
+        $scope.previewPending = false
+        $scope.previewReady = true
+        $scope.previewError = null
+        $scope.preview = {
+          altitude: toNumber(data.altitude, $scope.params.altitude),
+          speed: toNumber(data.speed, $scope.params.speed),
+          finishMode: data.finishMode || $scope.params.finishMode,
+          rotorRPM: toNumber(data.rotorRPM, 380),
+          heading: toNumber(data.heading, 0),
+          waypoints: data.waypoints || [],
+          start: data.start,
+          home: data.home,
+          planId: data.planId
+        }
+        if ($scope.preview.finishMode) {
+          $scope.params.finishMode = $scope.preview.finishMode
+        }
+        if (!$scope.startPoint && data.start) {
+          $scope.startPoint = clonePoint(data.start)
+        }
+        if (data.home) {
+          const homeClone = clonePoint(data.home)
+          if (homeClone) {
+            $scope.homePoint = homeClone
+            $scope.homeStatus = 'Home position from autopilot.'
+            $scope.homeStatusState = 'info'
+          }
+        }
+        setPatternGeometryFromPreview($scope.preview)
+        if (!$scope.status.waypointCount && patternGeometry.points.length > 0) {
+          $scope.status.waypointCount = Math.max(0, patternGeometry.points.length - 1)
+        }
+        updateSpoolPercent()
+        scheduleDraw()
+      }
+
+      function applyPreviewData(data, options) {
+        if (!data) return
+        if (data.ok === false) {
+          lastPreviewId = data.planId || lastPreviewId
+          handlePreviewFailure(data.reason)
+          return
+        }
+        if (data.planId && lastPreviewId && data.planId === lastPreviewId && !(options && options.force)) {
+          $scope.previewPending = false
+          return
+        }
+        lastPreviewId = data.planId || null
+        updatePreviewFromData(data)
       }
 
       $scope.onParamsChanged = function () {
@@ -722,8 +789,11 @@ angular.module('beamng.apps')
         $scope.startPoint = null
         patternGeometry.start = null
         patternGeometry.points = []
+        patternGeometry.mapSegments = []
+        patternGeometry.bounds = null
         $scope.previewReady = false
         $scope.previewError = null
+        lastPreviewId = null
         scheduleDraw()
       }
 
@@ -833,6 +903,7 @@ angular.module('beamng.apps')
         $scope.pending.arm = false
         $scope.pending.start = false
         lastPreviewSignature = null
+        lastPreviewId = null
         scheduleDraw()
       }
 
@@ -890,46 +961,7 @@ angular.module('beamng.apps')
 
       $scope.$on('bell407SurveyPreview', function (event, data) {
         $scope.$evalAsync(function () {
-          $scope.previewPending = false
-          if (!data || data.ok === false) {
-            $scope.previewReady = false
-            $scope.previewError = data && data.reason ? data.reason : 'Unable to compute preview.'
-            patternGeometry.points = []
-            scheduleDraw()
-            return
-          }
-          $scope.previewReady = true
-          $scope.previewError = null
-          $scope.preview = {
-            altitude: toNumber(data.altitude, $scope.params.altitude),
-            speed: toNumber(data.speed, $scope.params.speed),
-            finishMode: data.finishMode || $scope.params.finishMode,
-            rotorRPM: toNumber(data.rotorRPM, 380),
-            heading: toNumber(data.heading, 0),
-            waypoints: data.waypoints || [],
-            start: data.start,
-            home: data.home
-          }
-          if ($scope.preview.finishMode) {
-            $scope.params.finishMode = $scope.preview.finishMode
-          }
-          if (!$scope.startPoint && data.start) {
-            $scope.startPoint = clonePoint(data.start)
-          }
-          if (data.home) {
-            const homeClone = clonePoint(data.home)
-            if (homeClone) {
-              $scope.homePoint = homeClone
-              $scope.homeStatus = 'Home position from autopilot.'
-              $scope.homeStatusState = 'info'
-            }
-          }
-          setPatternGeometryFromPreview($scope.preview)
-          if (!$scope.status.waypointCount && patternGeometry.points.length > 0) {
-            $scope.status.waypointCount = Math.max(0, patternGeometry.points.length - 1)
-          }
-          updateSpoolPercent()
-          scheduleDraw()
+          applyPreviewData(data)
         })
       })
 

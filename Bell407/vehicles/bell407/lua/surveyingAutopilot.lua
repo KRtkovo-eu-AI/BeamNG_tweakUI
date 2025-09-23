@@ -9,6 +9,7 @@ local homePosition = nil
 local lastMarkerRequest = 0
 local lastInstallReported = nil
 local cachedMapModule = rawget(_G, "map")
+local planSequence = 0
 
 local function copyTable(data)
         if type(data) ~= "table" then return data end
@@ -405,8 +406,14 @@ local function buildPatternPlan(params)
         local home = homePosition and copyTable(homePosition) or {x = startPoint.x, y = startPoint.y, z = altitude}
         if not home.z then home.z = altitude end
 
+        local planId = params.planId
+        if not planId then
+                planSequence = planSequence + 1
+                planId = planSequence
+        end
+
         local plan = {
-                id = params.planId,
+                id = planId,
                 start = startPoint,
                 startHeading = firstHeading,
                 altitude = altitude,
@@ -444,7 +451,8 @@ local function buildPatternPlan(params)
                 finishMode = finishMode,
                 speed = speed,
                 rotorRPM = rotorRPM,
-                waypoints = previewWaypoints
+                waypoints = previewWaypoints,
+                planId = plan.id
         }
 
         if bounds then
@@ -461,13 +469,15 @@ end
 local function previewPattern(params)
         local plan, preview = buildPatternPlan(params)
         if not plan then
-                sendPreview({ok = false, reason = preview or "invalid"})
-                return false, preview or "invalid"
+                local reason = preview or "invalid"
+                local payload = {ok = false, reason = reason}
+                sendPreview(payload)
+                return payload
         end
         lastPreview = {plan = plan, preview = preview}
         cachedPlan = plan
         sendPreview(preview)
-        return true
+        return preview
 end
 
 local function configurePattern(params)
@@ -539,6 +549,7 @@ end
 local function onInit()
         autopController = nil
         lastInstallReported = nil
+        planSequence = 0
         computeHome()
         requestGroundMarker()
         updateInstallState()
@@ -554,6 +565,7 @@ local function onExtensionUnloaded()
         cachedPlan = nil
         lastPreview = nil
         lastInstallReported = nil
+        planSequence = 0
         updateInstallState(false)
 end
 
