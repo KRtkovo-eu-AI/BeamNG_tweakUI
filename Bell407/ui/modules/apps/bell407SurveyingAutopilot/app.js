@@ -159,6 +159,30 @@ angular.module('beamng.apps')
         return Number.isFinite(num) ? num : fallback
       }
 
+      function toArray(value) {
+        if (!value) return []
+        if (Array.isArray(value)) return value.slice()
+        if (typeof value.length === 'number' && Number.isFinite(value.length) && value.length >= 0) {
+          try {
+            return Array.prototype.slice.call(value)
+          } catch (err) {
+            // fall back to key-based extraction below
+          }
+        }
+        if (typeof value === 'object') {
+          return Object.keys(value)
+            .map(function (key) {
+              const index = parseInt(key, 10)
+              if (!Number.isFinite(index)) return null
+              return { key: key, index: index }
+            })
+            .filter(Boolean)
+            .sort(function (a, b) { return a.index - b.index })
+            .map(function (entry) { return value[entry.key] })
+        }
+        return []
+      }
+
       function pickCoordinate(source, keys) {
         for (let i = 0; i < keys.length; i += 1) {
           const key = keys[i]
@@ -663,7 +687,7 @@ angular.module('beamng.apps')
       function setPatternGeometryFromPreview(preview) {
         patternGeometry.start = clonePoint(preview.start || $scope.startPoint)
         patternGeometry.points = []
-        (preview.waypoints || []).forEach(function (wp) {
+        toArray(preview.waypoints).forEach(function (wp) {
           const point = clonePoint(wp)
           if (point) patternGeometry.points.push(point)
         })
@@ -671,12 +695,10 @@ angular.module('beamng.apps')
         patternGeometry.home = clonePoint(preview.home)
         patternGeometry.bounds = cloneBounds(preview.bounds)
         patternGeometry.mapSegments = []
-        if (Array.isArray(preview.mapSegments)) {
-          preview.mapSegments.forEach(function (segment) {
-            const mapped = cloneSegment(segment)
-            if (mapped) patternGeometry.mapSegments.push(mapped)
-          })
-        }
+        toArray(preview.mapSegments).forEach(function (segment) {
+          const mapped = cloneSegment(segment)
+          if (mapped) patternGeometry.mapSegments.push(mapped)
+        })
         if (!patternGeometry.start && patternGeometry.points.length > 0) {
           patternGeometry.start = clonePoint(patternGeometry.points[0])
         }
@@ -697,15 +719,19 @@ angular.module('beamng.apps')
         $scope.previewPending = false
         $scope.previewReady = true
         $scope.previewError = null
+        const previewWaypoints = toArray(data.waypoints)
+        const previewSegments = toArray(data.mapSegments)
         $scope.preview = {
           altitude: toNumber(data.altitude, $scope.params.altitude),
           speed: toNumber(data.speed, $scope.params.speed),
           finishMode: data.finishMode || $scope.params.finishMode,
           rotorRPM: toNumber(data.rotorRPM, 380),
           heading: toNumber(data.heading, 0),
-          waypoints: data.waypoints || [],
+          waypoints: previewWaypoints,
           start: data.start,
           home: data.home,
+          mapSegments: previewSegments,
+          bounds: data.bounds,
           planId: data.planId
         }
         if ($scope.preview.finishMode) {
