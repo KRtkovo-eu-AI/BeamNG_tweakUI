@@ -102,6 +102,35 @@ local function clamp(val, min, max)
         return val
 end
 
+local function getVelocityComponents()
+        if not obj or not obj.getVelocityXYZ then
+                return 0, 0, 0
+        end
+
+        local vx, vy, vz = obj:getVelocityXYZ()
+
+        if type(vx) == "number" then
+                return vx or 0, vy or 0, vz or 0
+        end
+
+        if vx then
+                local valueType = type(vx)
+                local x, y, z
+                if valueType == "table" then
+                        x = vx.x or vx[1]
+                        y = vx.y or vx[2]
+                        z = vx.z or vx[3]
+                else
+                        x = vx.x
+                        y = vx.y
+                        z = vx.z
+                end
+                return x or 0, y or 0, z or 0
+        end
+
+        return 0, 0, 0
+end
+
 local function resetControllers()
         pitchPID:reset()
         rollPID:reset()
@@ -409,7 +438,7 @@ local function controlToTarget(dt)
         local pos = obj:getPosition()
         if not pos then return end
 
-        local vel = obj:getVelocityXYZ()
+        local velXRaw, velYRaw = getVelocityComponents()
         local roll, pitch, yaw = obj:getRollPitchYaw()
 
         local yawSmoothed = yawSmoother:get(yaw, dt)
@@ -428,8 +457,8 @@ local function controlToTarget(dt)
         local localX =  cosYaw * dx + sinYaw * dy
         local localY = -sinYaw * dx + cosYaw * dy
 
-        local velX =  cosYaw * vel.x + sinYaw * vel.y
-        local velY = -sinYaw * vel.x + cosYaw * vel.y
+        local velX =  cosYaw * velXRaw + sinYaw * velYRaw
+        local velY = -sinYaw * velXRaw + cosYaw * velYRaw
 
         local dist2 = math.sqrt(localX * localX + localY * localY)
         local desiredSpeed = currentTargetSpeed or 0
@@ -544,9 +573,9 @@ local function updateTakeoff(dt)
         controlToTarget(dt)
         if obj then
                 local pos = obj:getPosition()
-                local vel = obj:getVelocityXYZ()
-                if pos and vel then
-                        if math.abs(pos.z - currentTargetPos.z) < 0.6 and math.abs(vel.z) < 0.6 then
+                local _, _, velZ = getVelocityComponents()
+                if pos then
+                        if math.abs(pos.z - currentTargetPos.z) < 0.6 and math.abs(velZ) < 0.6 then
                                 setState(states.transitStart)
                         end
                 end
@@ -635,9 +664,9 @@ local function updateLanding(dt)
         controlToTarget(dt)
         if obj then
                 local pos = obj:getPosition()
-                local vel = obj:getVelocityXYZ()
-                if pos and vel then
-                        if math.abs(pos.z - (landingTargetAltitude or pos.z)) < 0.25 and math.abs(vel.z) < 0.5 then
+                local _, _, velZ = getVelocityComponents()
+                if pos then
+                        if math.abs(pos.z - (landingTargetAltitude or pos.z)) < 0.25 and math.abs(velZ) < 0.5 then
                                 setState(states.complete)
                         end
                 end
