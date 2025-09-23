@@ -1,0 +1,393 @@
+local M = {}
+
+local moduleName = "surveyingAutopilot"
+local autopController = nil
+local cachedPlan = nil
+local lastPreview = nil
+local groundMarker = nil
+local homePosition = nil
+local lastMarkerRequest = 0
+
+local function copyTable(data)
+        if type(data) ~= "table" then return data end
+        local result = {}
+        for k, v in pairs(data) do
+                if type(v) == "table" then
+                        result[k] = copyTable(v)
+                else
+                        result[k] = v
+                end
+        end
+        return result
+end
+
+local function toPoint(value)
+        if not value then return nil end
+        if value.x then
+                return {x = value.x, y = value.y, z = value.z or 0}
+        end
+        if value[1] then
+                return {x = value[1], y = value[2], z = value[3] or 0}
+        end
+        return nil
+end
+
+local function ensureController()
+        if not autopController then
+                autopController = controller.getController("407surveyAutopilot")
+        end
+        return autopController
+end
+
+local function sendPreview(payload)
+        if guihooks and guihooks.trigger then
+                guihooks.trigger("bell407SurveyPreview", payload)
+        end
+end
+
+local function sendStatus(payload)
+        if guihooks and guihooks.trigger then
+                guihooks.trigger("bell407SurveyStatus", payload)
+        end
+end
+
+local function requestGroundMarker()
+        if not obj or not obj.getId then return end
+        local now = os.clock and os.clock() or 0
+        if now - lastMarkerRequest < 0.25 then return end
+        lastMarkerRequest = now
+        local command = string.format([[local veh = be:getObjectByID(%d)
+if not veh then return end
+local pos = core_groundMarkers and core_groundMarkers.getTargetPos()
+if pos then
+  veh:queueLuaCommand(string.format("extensions.%s._setGroundMarker(%%f,%%f,%%f)", pos.x, pos.y, pos.z))
+else
+  veh:queueLuaCommand("extensions.%s._setGroundMarker()")
+end
+]], obj:getId(), moduleName, moduleName)
+        obj:queueGameEngineLua(command)
+end
+
+function M._setGroundMarker(x, y, z)
+        if x then
+                groundMarker = {x = x, y = y, z = z}
+        else
+                groundMarker = nil
+        end
+end
+
+local function ensureGroundMarker()
+        if not groundMarker then
+            requestGroundMarker()
+        end
+        return groundMarker
+end
+
+local function ensureReady()
+        local ctrl = ensureController()
+        if not ctrl then
+                return nil, "missingPart"
+        end
+        if not ensureGroundMarker() then
+                return nil, "noTarget"
+        end
+        return ctrl
+end
+
+local function getGroundHeight(pos)
+        if not obj or not obj.castRayStatic then
+                return pos.z
+        end
+        local origin = vec3(pos.x, pos.y, pos.z + 50)
+        local hit = obj:castRayStatic(origin, vec3(0, 0, -1), 200)
+        if hit and hit > 0 and hit < 200 then
+                return origin.z - hit
+        end
+        return pos.z
+end
+
+local function computeHome()
+        if obj and obj.getSpawnWorldOOBB then
+                local oobb = obj:getSpawnWorldOOBB()
+                if oobb then
+                        local center = oobb:getCenter()
+                        homePosition = {x = center.x, y = center.y, z = center.z}
+                        homePosition.groundZ = getGroundHeight(homePosition)
+                        return
+                end
+        end
+        if obj and obj.getPosition then
+                local pos = obj:getPosition()
+                if pos then
+                        homePosition = {x = pos.x, y = pos.y, z = pos.z}
+                        homePosition.groundZ = getGroundHeight(homePosition)
+                end
+        end
+end
+
+
+local function buildPatternPlan(params)
+        if not params then
+                return nil, "missingParams"
+        end
+
+        local ctrl, err = ensureReady()
+        if not ctrl then
+                return nil, err
+        end
+
+        local startPoint = toPoint(params.startPoint or groundMarker)
+        if not startPoint then
+                return nil, "invalidStart"
+        end
+
+        local altitude = params.altitude or startPoint.z or 0
+        startPoint.z = altitude
+
+        local length = params.length or 0
+        local spacing = params.spacing or 0
+        local rows = math.max(1, math.floor(params.rows or 1))
+        local speed = params.speed or 12
+        local finishMode = params.finishMode or "hover"
+        local holdTime = params.holdTime or 2.0
+        local rotorRPM = params.rotorRPM or 380
+        local landingClearance = params.landingClearance or 0.45
+        local angleRad = math.rad(params.angle or 0)
+
+        local baseDir = {x = math.cos(angleRad), y = math.sin(angleRad)}
+        if math.abs(baseDir.x) < 1e-6 and math.abs(baseDir.y) < 1e-6 then
+                baseDir.x, baseDir.y = 1, 0
+        end
+
+        local lengthSign = length >= 0 and 1 or -1
+        local spacingSign = spacing >= 0 and 1 or -1
+        local lengthMag = math.abs(length)
+        local spacingMag = math.abs(spacing)
+
+        if lengthMag < 0.1 then lengthMag = 0.1 end
+
+        local forwardDir = {x = baseDir.x * lengthSign, y = baseDir.y * lengthSign}
+        local perpendicular = {x = -forwardDir.y, y = forwardDir.x}
+        local offsetDir = {x = perpendicular.x * spacingSign, y = perpendicular.y * spacingSign}
+
+        local patternPoints = {}
+        local previewWaypoints = {}
+        previewWaypoints[1] = {startPoint.x, startPoint.y, startPoint.z}
+
+        local currentPos = {x = startPoint.x, y = startPoint.y, z = altitude}
+        local firstHeading = math.atan2(forwardDir.y, forwardDir.x)
+        local totalLength = 0
+
+        for row = 1, rows do
+                local legEnd = {
+                        x = currentPos.x + forwardDir.x * lengthMag,
+                        y = currentPos.y + forwardDir.y * lengthMag,
+                        z = altitude
+                }
+                local legHeading = math.atan2(forwardDir.y, forwardDir.x)
+                patternPoints[#patternPoints + 1] = {
+                        pos = legEnd,
+                        heading = legHeading,
+                        speed = speed,
+                        length = lengthMag
+                }
+                previewWaypoints[#previewWaypoints + 1] = {legEnd.x, legEnd.y, legEnd.z}
+                totalLength = totalLength + lengthMag
+                currentPos = {x = legEnd.x, y = legEnd.y, z = altitude}
+
+                if row == rows then
+                        break
+                end
+
+                if spacingMag > 1e-4 then
+                        local midOffset = spacingMag * 0.5
+                        if midOffset > 1e-4 then
+                                local midPos = {
+                                        x = currentPos.x + offsetDir.x * midOffset,
+                                        y = currentPos.y + offsetDir.y * midOffset,
+                                        z = altitude
+                                }
+                                patternPoints[#patternPoints + 1] = {
+                                        pos = midPos,
+                                        heading = math.atan2(offsetDir.y, offsetDir.x),
+                                        speed = speed * 0.6,
+                                        length = midOffset
+                                }
+                                previewWaypoints[#previewWaypoints + 1] = {midPos.x, midPos.y, midPos.z}
+                                totalLength = totalLength + midOffset
+                                currentPos = {x = midPos.x, y = midPos.y, z = altitude}
+                        end
+
+                        local remainingOffset = spacingMag - midOffset
+                        if remainingOffset > 1e-4 then
+                                local nextStart = {
+                                        x = currentPos.x + offsetDir.x * remainingOffset,
+                                        y = currentPos.y + offsetDir.y * remainingOffset,
+                                        z = altitude
+                                }
+                                local nextDir = {x = -forwardDir.x, y = -forwardDir.y}
+                                patternPoints[#patternPoints + 1] = {
+                                        pos = nextStart,
+                                        heading = math.atan2(nextDir.y, nextDir.x),
+                                        speed = speed * 0.6,
+                                        length = remainingOffset
+                                }
+                                previewWaypoints[#previewWaypoints + 1] = {nextStart.x, nextStart.y, nextStart.z}
+                                totalLength = totalLength + remainingOffset
+                                currentPos = {x = nextStart.x, y = nextStart.y, z = altitude}
+                        end
+                end
+
+                forwardDir.x = -forwardDir.x
+                forwardDir.y = -forwardDir.y
+        end
+
+        local finalHover = {x = currentPos.x, y = currentPos.y, z = altitude}
+        local finalHeading = math.atan2(forwardDir.y, forwardDir.x)
+
+        local home = homePosition and copyTable(homePosition) or {x = startPoint.x, y = startPoint.y, z = altitude}
+        if not home.z then home.z = altitude end
+
+        local plan = {
+                id = params.planId,
+                start = startPoint,
+                startHeading = firstHeading,
+                altitude = altitude,
+                speed = speed,
+                transitSpeed = params.transitSpeed,
+                holdTime = holdTime,
+                finishMode = finishMode,
+                rotorRPM = rotorRPM,
+                landingClearance = landingClearance,
+                home = home,
+                homeHeading = firstHeading,
+                homeGround = home.groundZ or home.z,
+                finalHoverPos = finalHover,
+                finalHeading = finalHeading,
+                patternPoints = patternPoints,
+                totalLength = totalLength
+        }
+
+        local preview = {
+                ok = true,
+                start = {startPoint.x, startPoint.y, startPoint.z},
+                home = {home.x, home.y, home.z},
+                altitude = altitude,
+                heading = firstHeading,
+                finishMode = finishMode,
+                speed = speed,
+                rotorRPM = rotorRPM,
+                waypoints = previewWaypoints
+        }
+
+        return plan, preview
+end
+
+local function previewPattern(params)
+        local plan, preview = buildPatternPlan(params)
+        if not plan then
+                sendPreview({ok = false, reason = preview or "invalid"})
+                return false, preview or "invalid"
+        end
+        lastPreview = {plan = plan, preview = preview}
+        cachedPlan = plan
+        sendPreview(preview)
+        return true
+end
+
+local function configurePattern(params)
+        local plan, preview = buildPatternPlan(params)
+        if not plan then
+                sendStatus({ok = false, reason = preview or "invalid"})
+                return false, preview or "invalid"
+        end
+        cachedPlan = plan
+        lastPreview = {plan = plan, preview = preview}
+        local ctrl = ensureController()
+        if not ctrl then
+                sendStatus({ok = false, reason = "missingPart"})
+                return false, "missingPart"
+        end
+        local ok, reason = ctrl.setPatternPlan(plan)
+        if not ok then
+                sendStatus({ok = false, reason = reason or "setFailed"})
+                return false, reason or "setFailed"
+        end
+        sendPreview(preview)
+        return true
+end
+
+local function activate()
+        local ctrl, reason = ensureReady()
+        if not ctrl then
+                sendStatus({ok = false, reason = reason})
+                return false, reason
+        end
+        if not cachedPlan then
+                sendStatus({ok = false, reason = "noPlan"})
+                return false, "noPlan"
+        end
+        local ok, err = ctrl.arm(cachedPlan)
+        if not ok then
+                sendStatus({ok = false, reason = err or "armFailed"})
+                return false, err or "armFailed"
+        end
+        return true
+end
+
+local function startSurvey()
+        local ctrl, reason = ensureReady()
+        if not ctrl then
+                sendStatus({ok = false, reason = reason})
+                return false, reason
+        end
+        local ok, err = ctrl.beginPattern()
+        if not ok then
+                sendStatus({ok = false, reason = err or "beginFailed"})
+                return false, err or "beginFailed"
+        end
+        return true
+end
+
+local function cancel(reason)
+        local ctrl = ensureController()
+        if not ctrl then
+                sendStatus({ok = false, reason = "missingPart"})
+                return false, "missingPart"
+        end
+        ctrl.abort(reason or "cancelled")
+        return true
+end
+
+local function isInstalled()
+        return ensureController() ~= nil
+end
+
+local function onInit()
+        autopController = nil
+        computeHome()
+        requestGroundMarker()
+end
+
+local function onReset()
+        computeHome()
+        requestGroundMarker()
+end
+
+local function onExtensionUnloaded()
+        autopController = nil
+        cachedPlan = nil
+        lastPreview = nil
+end
+
+M.onInit = onInit
+M.onReset = onReset
+M.onExtensionUnloaded = onExtensionUnloaded
+M.isInstalled = isInstalled
+M.previewPattern = previewPattern
+M.configurePattern = configurePattern
+M.activate = activate
+M.startSurvey = startSurvey
+M.cancel = cancel
+
+return M
