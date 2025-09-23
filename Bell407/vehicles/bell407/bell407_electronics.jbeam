@@ -5,10 +5,11 @@
 		"name":"Electronics",
 	}
     "slotType" : "bell_electronics",
-	"slots": [
-		["type", "default", "description"]
-		["bell_assists","bell_assists","Pilot Assists"],
-	],
+        "slots": [
+                ["type", "default", "description"]
+                ["bell_assists","bell_assists","Pilot Assists"],
+                ["bell_survey_autopilot","bell_survey_autopilot","Surveying Autopilot"],
+        ],
     "controller": [
 		["fileName"],
 		["407electrics", {}],
