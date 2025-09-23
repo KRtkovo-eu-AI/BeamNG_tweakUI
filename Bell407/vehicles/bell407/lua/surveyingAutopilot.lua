@@ -7,6 +7,9 @@ local lastPreview = nil
 local groundMarker = nil
 local homePosition = nil
 local lastMarkerRequest = 0
+local lastInstallReported = nil
+local cachedMapModule = rawget(_G, "map")
+local planSequence = 0
 
 local function copyTable(data)
         if type(data) ~= "table" then return data end
@@ -32,11 +35,139 @@ local function toPoint(value)
         return nil
 end
 
+local function to2DComponents(value)
+        if not value then return nil, nil end
+        if value.x then
+                return value.x, value.y
+        end
+        if value[1] then
+                return value[1], value[2]
+        end
+        return nil, nil
+end
+
+local function extendBounds(bounds, point)
+        if not point then return end
+        local x, y = to2DComponents(point)
+        if not x or not y then return end
+        if not bounds.minX or x < bounds.minX then bounds.minX = x end
+        if not bounds.maxX or x > bounds.maxX then bounds.maxX = x end
+        if not bounds.minY or y < bounds.minY then bounds.minY = y end
+        if not bounds.maxY or y > bounds.maxY then bounds.maxY = y end
+end
+
+local function computePlanBounds(startPoint, patternPoints, home, finalHover)
+        local bounds = {minX = nil, maxX = nil, minY = nil, maxY = nil}
+        extendBounds(bounds, startPoint)
+        extendBounds(bounds, home)
+        extendBounds(bounds, finalHover)
+        if patternPoints then
+                for _, entry in ipairs(patternPoints) do
+                        if entry and entry.pos then
+                                extendBounds(bounds, entry.pos)
+                        elseif entry then
+                                extendBounds(bounds, entry)
+                        end
+                end
+        end
+        if not bounds.minX then
+                return nil
+        end
+        local spanX = (bounds.maxX or bounds.minX) - bounds.minX
+        local spanY = (bounds.maxY or bounds.minY) - bounds.minY
+        local padding = math.max(40, math.max(spanX, spanY) * 0.25)
+        bounds.minX = bounds.minX - padding
+        bounds.maxX = bounds.maxX + padding
+        bounds.minY = bounds.minY - padding
+        bounds.maxY = bounds.maxY + padding
+        bounds.padding = padding
+        return bounds
+end
+
+local function getMapData()
+        local mapModule = rawget(_G, "map") or cachedMapModule
+        if mapModule and mapModule.getMap then
+                cachedMapModule = mapModule
+                return mapModule.getMap()
+        end
+        return nil
+end
+
+local function collectMapSegments(bounds)
+        if not bounds then return {} end
+        local nav = getMapData()
+        if not nav or not nav.nodes then
+                return {}
+        end
+        local minX, maxX, minY, maxY = bounds.minX, bounds.maxX, bounds.minY, bounds.maxY
+        if not (minX and maxX and minY and maxY) then
+                return {}
+        end
+        local segments = {}
+        local seen = {}
+        for nodeId, node in pairs(nav.nodes) do
+                local pos = node and node.pos
+                local px, py = to2DComponents(pos)
+                if px and py and px >= minX and px <= maxX and py >= minY and py <= maxY then
+                        local links = node.links
+                        if links then
+                                for targetId, _ in pairs(links) do
+                                        local other = nav.nodes[targetId]
+                                        local ox, oy = to2DComponents(other and other.pos)
+                                        if ox and oy and ox >= minX and ox <= maxX and oy >= minY and oy <= maxY then
+                                                local a, b = tostring(nodeId), tostring(targetId)
+                                                if a > b then
+                                                        a, b = b, a
+                                                end
+                                                local key = a .. "|" .. b
+                                                if not seen[key] then
+                                                        seen[key] = true
+                                                        local dx = ox - px
+                                                        local dy = oy - py
+                                                        if dx * dx + dy * dy > 0.01 then
+                                                                segments[#segments + 1] = {{px, py}, {ox, oy}}
+                                                                if #segments >= 400 then
+                                                                        return segments
+                                                                end
+                                                        end
+                                                end
+                                        end
+                                end
+                        end
+                end
+        end
+        return segments
+end
+
+local function updateInstallState(installed)
+        local value = installed
+        if value == nil then
+                value = autopController ~= nil
+        end
+        value = value and true or false
+        if lastInstallReported == value then
+                return
+        end
+        lastInstallReported = value
+        if guihooks and guihooks.trigger then
+                guihooks.trigger("bell407SurveyInstallState", {installed = value, module = moduleName})
+        end
+end
+
 local function ensureController()
         if not autopController then
                 autopController = controller.getController("407surveyAutopilot")
+                if autopController then
+                        updateInstallState(true)
+                end
         end
         return autopController
+end
+
+local function isInstalled()
+        local installed = ensureController() ~= nil
+        updateInstallState(installed)
+        return installed
 end
 
 local function sendPreview(payload)
@@ -77,21 +208,32 @@ function M._setGroundMarker(x, y, z)
 end
 
 local function ensureGroundMarker()
-        if not groundMarker then
-            requestGroundMarker()
-        end
-        return groundMarker
+	if not groundMarker then
+		requestGroundMarker()
+	end
+	return groundMarker
 end
 
-local function ensureReady()
-        local ctrl = ensureController()
-        if not ctrl then
-                return nil, "missingPart"
-        end
-        if not ensureGroundMarker() then
-                return nil, "noTarget"
-        end
-        return ctrl
+local function ensureReady(options)
+	local ctrl = ensureController()
+	if not ctrl then
+		updateInstallState(false)
+		return nil, "missingPart"
+	end
+
+	local requireMarker = true
+	if options and options.requireMarker ~= nil then
+		requireMarker = options.requireMarker and true or false
+	end
+
+	if requireMarker then
+		local marker = ensureGroundMarker()
+		if not marker then
+			return nil, "noTarget"
+		end
+	end
+
+	return ctrl
 end
 
 local function getGroundHeight(pos)
@@ -126,20 +268,36 @@ local function computeHome()
 end
 
 
+local function getHome()
+        if not homePosition then
+                computeHome()
+        end
+        if not homePosition then return nil end
+        return copyTable(homePosition)
+end
+
+
 local function buildPatternPlan(params)
-        if not params then
-                return nil, "missingParams"
-        end
+	if not params then
+		return nil, "missingParams"
+	end
 
-        local ctrl, err = ensureReady()
-        if not ctrl then
-                return nil, err
-        end
+	local explicitStart = toPoint(params.startPoint)
+	local ctrl, err = ensureReady({requireMarker = explicitStart == nil})
+	if not ctrl then
+		return nil, err
+	end
 
-        local startPoint = toPoint(params.startPoint or groundMarker)
-        if not startPoint then
-                return nil, "invalidStart"
-        end
+	local startPoint = explicitStart or toPoint(groundMarker)
+	if not startPoint then
+		local marker = ensureGroundMarker()
+		if marker then
+			startPoint = toPoint(marker)
+		end
+	end
+	if not startPoint then
+		return nil, explicitStart and "invalidStart" or "noTarget"
+	end
 
         local altitude = params.altitude or startPoint.z or 0
         startPoint.z = altitude
@@ -248,8 +406,14 @@ local function buildPatternPlan(params)
         local home = homePosition and copyTable(homePosition) or {x = startPoint.x, y = startPoint.y, z = altitude}
         if not home.z then home.z = altitude end
 
+        local planId = params.planId
+        if not planId then
+                planSequence = planSequence + 1
+                planId = planSequence
+        end
+
         local plan = {
-                id = params.planId,
+                id = planId,
                 start = startPoint,
                 startHeading = firstHeading,
                 altitude = altitude,
@@ -268,6 +432,16 @@ local function buildPatternPlan(params)
                 totalLength = totalLength
         }
 
+        local bounds = computePlanBounds(plan.start, plan.patternPoints, plan.home, plan.finalHoverPos)
+        if bounds then
+                plan.bounds = copyTable(bounds)
+        end
+
+        local mapSegments = collectMapSegments(bounds)
+        if mapSegments and #mapSegments > 0 then
+                plan.mapSegments = copyTable(mapSegments)
+        end
+
         local preview = {
                 ok = true,
                 start = {startPoint.x, startPoint.y, startPoint.z},
@@ -277,8 +451,17 @@ local function buildPatternPlan(params)
                 finishMode = finishMode,
                 speed = speed,
                 rotorRPM = rotorRPM,
-                waypoints = previewWaypoints
+                waypoints = previewWaypoints,
+                planId = plan.id
         }
+
+        if bounds then
+                preview.bounds = {minX = bounds.minX, maxX = bounds.maxX, minY = bounds.minY, maxY = bounds.maxY}
+        end
+
+        if mapSegments and #mapSegments > 0 then
+                preview.mapSegments = copyTable(mapSegments)
+        end
 
         return plan, preview
 end
@@ -286,13 +469,15 @@ end
 local function previewPattern(params)
         local plan, preview = buildPatternPlan(params)
         if not plan then
-                sendPreview({ok = false, reason = preview or "invalid"})
-                return false, preview or "invalid"
+                local reason = preview or "invalid"
+                local payload = {ok = false, reason = reason}
+                sendPreview(payload)
+                return payload
         end
         lastPreview = {plan = plan, preview = preview}
         cachedPlan = plan
         sendPreview(preview)
-        return true
+        return preview
 end
 
 local function configurePattern(params)
@@ -318,7 +503,8 @@ local function configurePattern(params)
 end
 
 local function activate()
-        local ctrl, reason = ensureReady()
+        local requireMarker = not cachedPlan or not cachedPlan.start
+        local ctrl, reason = ensureReady({requireMarker = requireMarker})
         if not ctrl then
                 sendStatus({ok = false, reason = reason})
                 return false, reason
@@ -336,7 +522,8 @@ local function activate()
 end
 
 local function startSurvey()
-        local ctrl, reason = ensureReady()
+        local requireMarker = not cachedPlan or not cachedPlan.start
+        local ctrl, reason = ensureReady({requireMarker = requireMarker})
         if not ctrl then
                 sendStatus({ok = false, reason = reason})
                 return false, reason
@@ -359,14 +546,13 @@ local function cancel(reason)
         return true
 end
 
-local function isInstalled()
-        return ensureController() ~= nil
-end
-
 local function onInit()
         autopController = nil
+        lastInstallReported = nil
+        planSequence = 0
         computeHome()
         requestGroundMarker()
+        updateInstallState()
 end
 
 local function onReset()
@@ -378,12 +564,16 @@ local function onExtensionUnloaded()
         autopController = nil
         cachedPlan = nil
         lastPreview = nil
+        lastInstallReported = nil
+        planSequence = 0
+        updateInstallState(false)
 end
 
 M.onInit = onInit
 M.onReset = onReset
 M.onExtensionUnloaded = onExtensionUnloaded
 M.isInstalled = isInstalled
+M.getHome = getHome
 M.previewPattern = previewPattern
 M.configurePattern = configurePattern
 M.activate = activate
