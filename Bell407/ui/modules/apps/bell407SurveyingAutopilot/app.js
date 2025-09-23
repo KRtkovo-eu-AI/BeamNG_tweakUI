@@ -12,6 +12,8 @@ angular.module('beamng.apps')
       const MAX_INSTALL_CHECK_ATTEMPTS = 3
       const INSTALL_CHECK_RETRY_DELAY = 300
       const VEHICLE_EVENT_INSTALL_CHECK_DELAY = 150
+      const MINIMIZE_STORAGE_KEY = 'bell407SurveyUI.minimized'
+      const HOME_FETCH_LUA = 'return (function() local ext = extensions and extensions.surveyingAutopilot if ext and ext.getHome then return ext.getHome() end end)()'
 
       const defaultParams = {
         altitude: 120,
@@ -71,6 +73,16 @@ angular.module('beamng.apps')
         { value: 'return_home_land', label: 'Return home and land' }
       ]
 
+      function getFinishModeLabel(value) {
+        if (!value) return ''
+        const match = ($scope.finishModes || []).find(function (mode) {
+          return mode.value === value
+        })
+        return match ? match.label : value
+      }
+
+      $scope.getFinishModeLabel = getFinishModeLabel
+
       $scope.startPoint = null
       $scope.homePoint = null
       $scope.preview = { altitude: null, speed: null, finishMode: null, rotorRPM: 380, heading: 0, waypoints: [] }
@@ -89,6 +101,8 @@ angular.module('beamng.apps')
       $scope.homeStatus = ''
       $scope.homeStatusState = 'info'
       $scope.layout = { compact: false, stacked: false }
+      $scope.uiState = { minimized: loadMinimizedState() }
+      persistMinimizedState($scope.uiState.minimized)
 
       let previewDebounce = null
       let lastPreviewSignature = null
@@ -97,10 +111,44 @@ angular.module('beamng.apps')
       let drawPending = null
       let pendingInstallCheck = null
       let installCheckAttempts = 0
+      let homeSyncInFlight = false
 
       const mapState = {
         canvas: null,
         ctx: null
+      }
+
+      function setMinimizedState(value) {
+        const next = !!value
+        if ($scope.uiState.minimized === next) return
+        $scope.uiState.minimized = next
+        persistMinimizedState(next)
+        if (!next) {
+          $timeout(function () {
+            ensureCanvasSize()
+            scheduleDraw()
+          })
+        }
+      }
+
+      $scope.toggleMinimized = function () {
+        setMinimizedState(!$scope.uiState.minimized)
+      }
+
+      function loadMinimizedState() {
+        try {
+          return window.localStorage.getItem(MINIMIZE_STORAGE_KEY) === '1'
+        } catch (err) {
+          return false
+        }
+      }
+
+      function persistMinimizedState(minimized) {
+        try {
+          window.localStorage.setItem(MINIMIZE_STORAGE_KEY, minimized ? '1' : '0')
+        } catch (err) {
+          // ignore storage errors
+        }
       }
 
       function toNumber(value, fallback) {
@@ -125,6 +173,57 @@ angular.module('beamng.apps')
           }
         }
         return null
+      }
+
+      function applyHomePoint(result, options) {
+        const point = clonePoint(result)
+        if (!point) {
+          if (!options || options.updateStatus !== false) {
+            $scope.homeStatus = (options && options.missingMessage) || 'Home position unavailable from autopilot.'
+            $scope.homeStatusState = 'error'
+          }
+          return false
+        }
+
+        $scope.homePoint = point
+
+        if ((!$scope.startPoint && (options ? options.setStartIfMissing !== false : true)) || (options && options.forceStart)) {
+          $scope.startPoint = clonePoint(point)
+        }
+
+        if (!options || options.updateStatus !== false) {
+          if (options && options.message) {
+            $scope.homeStatus = options.message
+            $scope.homeStatusState = options.state || 'info'
+          } else {
+            $scope.homeStatus = 'Home position synced from autopilot.'
+            $scope.homeStatusState = 'info'
+          }
+        }
+
+        if (!options || options.queuePreview !== false) {
+          queuePreview()
+        }
+        scheduleDraw()
+        return true
+      }
+
+      function syncHomeFromAutopilot(options) {
+        if ($scope.installState.status !== 'ready') return
+        if (homeSyncInFlight && !(options && options.force)) return
+        homeSyncInFlight = true
+        runOnActive(HOME_FETCH_LUA, function (result) {
+          $scope.$evalAsync(function () {
+            homeSyncInFlight = false
+            const success = applyHomePoint(result, options)
+            if (!success && options && typeof options.onFailure === 'function') {
+              options.onFailure()
+            }
+            if (success && options && typeof options.onSuccess === 'function') {
+              options.onSuccess()
+            }
+          })
+        })
       }
 
       function updateStatusText() {
@@ -180,6 +279,7 @@ angular.module('beamng.apps')
 
       function scheduleDraw() {
         if (!mapState.ctx || drawPending) return
+        if ($scope.uiState.minimized) return
         drawPending = window.requestAnimationFrame(function () {
           drawPending = null
           drawMap()
@@ -188,6 +288,7 @@ angular.module('beamng.apps')
 
       function drawMap() {
         if (!mapState.canvas || !mapState.ctx) return
+        if ($scope.uiState.minimized) return
         ensureCanvasSize()
         const ratio = window.devicePixelRatio || 1
         const ctx = mapState.ctx
@@ -422,8 +523,9 @@ angular.module('beamng.apps')
       }
 
       function buildPayload() {
-        if (!$scope.startPoint) return null
-        const start = clonePoint($scope.startPoint)
+        const startSource = $scope.startPoint || $scope.homePoint
+        if (!startSource) return null
+        const start = clonePoint(startSource)
         if (!start) return null
         const payload = {
           startPoint: start,
@@ -468,7 +570,14 @@ angular.module('beamng.apps')
         previewDebounce = $timeout(function () {
           previewDebounce = null
           const payload = buildPayload()
-          if (!payload) return
+          if (!payload) {
+            $scope.previewPending = false
+            $scope.previewReady = false
+            $scope.previewError = 'Select a start point or sync the home position first.'
+            patternGeometry.points = []
+            scheduleDraw()
+            return
+          }
           const signature = payloadSignature(payload)
           if (signature && signature === lastPreviewSignature && $scope.previewReady) return
           lastPreviewSignature = signature
@@ -527,24 +636,10 @@ angular.module('beamng.apps')
       $scope.useHomePoint = function () {
         if ($scope.loadingHome) return
         $scope.loadingHome = true
-        const lua = 'local ext = extensions and extensions.surveyingAutopilot if ext and ext.getHome then return ext.getHome() end'
-        runOnActive(lua, function (result) {
+        runOnActive(HOME_FETCH_LUA, function (result) {
           $scope.$evalAsync(function () {
             $scope.loadingHome = false
-            const point = clonePoint(result)
-            if (point) {
-              $scope.homePoint = point
-              if (!$scope.startPoint) {
-                $scope.startPoint = clonePoint(point)
-              }
-              $scope.homeStatus = 'Home position synced from autopilot.'
-              $scope.homeStatusState = 'info'
-              queuePreview()
-              scheduleDraw()
-            } else {
-              $scope.homeStatus = 'Home position unavailable from autopilot.'
-              $scope.homeStatusState = 'error'
-            }
+            applyHomePoint(result)
           })
         })
       }
@@ -566,17 +661,22 @@ angular.module('beamng.apps')
 
       $scope.canStart = function () {
         if ($scope.installState.status !== 'ready') return false
-        return ($scope.status.armed || $scope.status.state === 'armed') && !$scope.pending.start
+        if ($scope.pending.start || $scope.pending.arm) return false
+        if ($scope.status.armed || $scope.status.state === 'armed') return true
+        return !!($scope.startPoint || $scope.homePoint)
       }
 
       $scope.canAbort = function () {
         return $scope.status.active || $scope.status.armed
       }
 
-      $scope.armAutopilot = function () {
-        if (!$scope.canArm()) return
+      function configureAndArm(afterArm) {
+        if ($scope.pending.arm) return false
         const payload = buildPayload()
-        if (!payload) return
+        if (!payload) {
+          $scope.previewError = 'Select a valid start point before arming the autopilot.'
+          return false
+        }
         $scope.pending.arm = true
         $scope.previewError = null
         autopilotCommand('configurePattern', payload, function (result) {
@@ -584,6 +684,7 @@ angular.module('beamng.apps')
             if (result === false) {
               $scope.previewError = 'Failed to configure autopilot pattern.'
               $scope.pending.arm = false
+              if (typeof afterArm === 'function') afterArm(false)
               return
             }
             autopilotCommand('activate', undefined, function (activateResult) {
@@ -592,23 +693,45 @@ angular.module('beamng.apps')
                   $scope.previewError = 'Autopilot failed to arm.'
                 }
                 $scope.pending.arm = false
+                if (typeof afterArm === 'function') {
+                  afterArm(activateResult !== false)
+                }
               })
             })
           })
         })
+        return true
+      }
+
+      $scope.armAutopilot = function () {
+        if (!$scope.canArm()) return
+        configureAndArm()
       }
 
       $scope.startSurvey = function () {
-        if (!$scope.canStart()) return
-        $scope.pending.start = true
-        autopilotCommand('startSurvey', undefined, function (result) {
-          $scope.$evalAsync(function () {
-            if (result === false) {
-              $scope.previewError = 'Autopilot refused to start the survey.'
-            }
-            $scope.pending.start = false
+        if ($scope.pending.start) return
+        const launch = function () {
+          $scope.pending.start = true
+          autopilotCommand('startSurvey', undefined, function (result) {
+            $scope.$evalAsync(function () {
+              if (result === false) {
+                $scope.previewError = 'Autopilot refused to start the survey.'
+              }
+              $scope.pending.start = false
+            })
           })
-        })
+        }
+
+        if ($scope.status.state !== 'armed' && !$scope.status.armed) {
+          configureAndArm(function (success) {
+            if (success) {
+              launch()
+            }
+          })
+          return
+        }
+
+        launch()
       }
 
       $scope.abortSurvey = function () {
@@ -618,20 +741,20 @@ angular.module('beamng.apps')
       }
 
       $scope.resetUi = function () {
+        const preservedHome = clonePoint($scope.homePoint)
         $scope.params = angular.copy(defaultParams)
         $scope.startPoint = null
         $scope.previewReady = false
         $scope.preview = { altitude: null, speed: null, finishMode: null, rotorRPM: 380, heading: 0, waypoints: [] }
         patternGeometry.start = null
         patternGeometry.points = []
-        patternGeometry.home = null
+        patternGeometry.home = preservedHome
         $scope.status = angular.copy(defaultStatus)
         $scope.statusText = stateLabels.idle
         $scope.spoolPercent = 0
         $scope.previewError = null
         $scope.pending.arm = false
         $scope.pending.start = false
-        $scope.homeStatus = ''
         lastPreviewSignature = null
         scheduleDraw()
       }
@@ -653,6 +776,7 @@ angular.module('beamng.apps')
               installCheckAttempts = 0
               cancelScheduledInstallCheck()
               setInstallState('ready')
+              syncHomeFromAutopilot({ setStartIfMissing: !$scope.startPoint })
               queuePreview()
             } else if (installCheckAttempts < MAX_INSTALL_CHECK_ATTEMPTS) {
               scheduleInstallCheck(INSTALL_CHECK_RETRY_DELAY, false)
@@ -674,6 +798,7 @@ angular.module('beamng.apps')
             if ($scope.installState.status !== 'ready') {
               setInstallState('ready')
             }
+            syncHomeFromAutopilot({ setStartIfMissing: !$scope.startPoint })
             queuePreview()
           } else if (installedFlag === false) {
             cancelScheduledInstallCheck()
@@ -749,6 +874,9 @@ angular.module('beamng.apps')
               handleCompletionReset()
             }
           }
+          if (data.event && (data.event.type === 'init' || data.event.type === 'reset')) {
+            syncHomeFromAutopilot({ setStartIfMissing: !$scope.startPoint, updateStatus: false })
+          }
           scheduleDraw()
         })
       })
@@ -784,6 +912,11 @@ angular.module('beamng.apps')
 
       $scope.$on('VehicleChange', function () {
         $scope.$evalAsync(function () {
+          $scope.homePoint = null
+          patternGeometry.home = null
+          $scope.homeStatus = ''
+          $scope.homeStatusState = 'info'
+          $scope.resetUi()
           scheduleInstallCheck(VEHICLE_EVENT_INSTALL_CHECK_DELAY)
         })
       })
@@ -791,6 +924,7 @@ angular.module('beamng.apps')
       $scope.$on('VehicleReset', function () {
         $scope.$evalAsync(function () {
           scheduleInstallCheck(VEHICLE_EVENT_INSTALL_CHECK_DELAY)
+          syncHomeFromAutopilot({ setStartIfMissing: !$scope.startPoint, force: true })
         })
       })
 

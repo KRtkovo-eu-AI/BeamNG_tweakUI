@@ -7,6 +7,7 @@ local lastPreview = nil
 local groundMarker = nil
 local homePosition = nil
 local lastMarkerRequest = 0
+local lastInstallReported = nil
 
 local function copyTable(data)
         if type(data) ~= "table" then return data end
@@ -32,25 +33,35 @@ local function toPoint(value)
         return nil
 end
 
+local function updateInstallState(installed)
+        local value = installed
+        if value == nil then
+                value = autopController ~= nil
+        end
+        value = value and true or false
+        if lastInstallReported == value then
+                return
+        end
+        lastInstallReported = value
+        if guihooks and guihooks.trigger then
+                guihooks.trigger("bell407SurveyInstallState", {installed = value, module = moduleName})
+        end
+end
+
 local function ensureController()
         if not autopController then
                 autopController = controller.getController("407surveyAutopilot")
+                if autopController then
+                        updateInstallState(true)
+                end
         end
         return autopController
 end
 
 local function isInstalled()
-        return ensureController() ~= nil
-end
-
-local function notifyInstallState(installed)
-        if guihooks and guihooks.trigger then
-                local value = installed
-                if value == nil then
-                        value = isInstalled()
-                end
-                guihooks.trigger("bell407SurveyInstallState", {installed = value and true or false, module = moduleName})
-        end
+        local installed = ensureController() ~= nil
+        updateInstallState(installed)
+        return installed
 end
 
 local function sendPreview(payload)
@@ -100,7 +111,7 @@ end
 local function ensureReady()
         local ctrl = ensureController()
         if not ctrl then
-                notifyInstallState(false)
+                updateInstallState(false)
                 return nil, "missingPart"
         end
         if not ensureGroundMarker() then
@@ -138,6 +149,15 @@ local function computeHome()
                         homePosition.groundZ = getGroundHeight(homePosition)
                 end
         end
+end
+
+
+local function getHome()
+        if not homePosition then
+                computeHome()
+        end
+        if not homePosition then return nil end
+        return copyTable(homePosition)
 end
 
 
@@ -376,9 +396,10 @@ end
 
 local function onInit()
         autopController = nil
+        lastInstallReported = nil
         computeHome()
         requestGroundMarker()
-        notifyInstallState()
+        updateInstallState()
 end
 
 local function onReset()
@@ -390,13 +411,15 @@ local function onExtensionUnloaded()
         autopController = nil
         cachedPlan = nil
         lastPreview = nil
-        notifyInstallState(false)
+        lastInstallReported = nil
+        updateInstallState(false)
 end
 
 M.onInit = onInit
 M.onReset = onReset
 M.onExtensionUnloaded = onExtensionUnloaded
 M.isInstalled = isInstalled
+M.getHome = getHome
 M.previewPattern = previewPattern
 M.configurePattern = configurePattern
 M.activate = activate

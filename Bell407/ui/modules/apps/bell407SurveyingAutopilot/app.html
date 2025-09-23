@@ -1,4 +1,4 @@
-<div class="bngApp bell407-survey-app" layout="column">
+<div class="bngApp bell407-survey-app" layout="column" ng-class="{'is-minimized': uiState.minimized}">
   <style>
     .bell407-survey-app {
       width: 100%;
@@ -15,6 +15,72 @@
       font-size: 1rem;
       font-weight: 600;
       color: #f6f8fc;
+    }
+
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+    }
+
+    .minimize-toggle {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      border: 1px solid rgba(126, 201, 255, 0.45);
+      background: rgba(30, 36, 48, 0.85);
+      color: #e6f3ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .minimize-toggle:hover {
+      background: rgba(86, 182, 255, 0.45);
+      border-color: rgba(126, 201, 255, 0.75);
+    }
+
+    .minimized-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      background: rgba(24, 28, 38, 0.9);
+      border: 1px solid rgba(120, 140, 160, 0.35);
+      border-radius: 6px;
+      padding: 0.6rem 0.7rem;
+      cursor: pointer;
+    }
+
+    .minimized-summary .mini-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #f6f8fc;
+    }
+
+    .minimized-summary .mini-line {
+      font-size: 0.75rem;
+      color: #cbd5e4;
+    }
+
+    .bell407-survey-stage {
+      flex: 1 1 auto;
+      display: flex;
+    }
+
+    .bell407-survey-stage-content {
+      display: flex;
+      flex: 1 1 auto;
+      width: 100%;
     }
 
     .bell407-survey-wrapper {
@@ -94,8 +160,7 @@
       color: #c4d0df;
     }
 
-    .parameter-grid input,
-    .parameter-grid select {
+    .parameter-grid input {
       background: rgba(12, 14, 18, 0.9);
       border: 1px solid rgba(90, 110, 130, 0.45);
       border-radius: 4px;
@@ -106,11 +171,58 @@
       box-sizing: border-box;
     }
 
-    .parameter-grid input:focus,
-    .parameter-grid select:focus {
+    .parameter-grid input:focus {
       outline: none;
       border-color: #7ec9ff;
       box-shadow: 0 0 0 1px rgba(126, 201, 255, 0.35);
+    }
+
+    .parameter-grid .select-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      background: rgba(40, 46, 58, 0.6);
+      border-radius: 4px;
+      padding: 0.45rem 0.55rem;
+      border: 1px solid rgba(120, 140, 160, 0.2);
+    }
+
+    .parameter-grid .select-field span {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #c4d0df;
+    }
+
+    .parameter-grid .select-field md-input-container {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+    }
+
+    .parameter-grid .select-field md-select {
+      background: rgba(12, 14, 18, 0.9);
+      border: 1px solid rgba(90, 110, 130, 0.45);
+      border-radius: 4px;
+      min-height: 2.1rem;
+      display: flex;
+      align-items: center;
+      padding: 0 0.35rem;
+    }
+
+    .parameter-grid .select-field md-select .md-select-value {
+      border-bottom: none;
+      padding: 0;
+      min-height: 2.1rem;
+      color: #f0f4ff;
+    }
+
+    .parameter-grid .select-field md-select .md-select-value span {
+      color: #f0f4ff;
+    }
+
+    .parameter-grid .select-field md-select .md-select-icon {
+      color: #aab7c8;
     }
 
     .start-section {
@@ -316,18 +428,12 @@
       width: 100%;
     }
 
-    .status-badges {
-      display: flex;
-      gap: 0.35rem;
-      flex-wrap: wrap;
-    }
-
-    .status-badge {
-      background: rgba(70, 90, 120, 0.35);
+    .finish-info {
+      background: rgba(70, 90, 120, 0.25);
       border: 1px solid rgba(126, 201, 255, 0.3);
       color: #e6f3ff;
       border-radius: 999px;
-      padding: 0.2rem 0.6rem;
+      padding: 0.2rem 0.55rem;
       font-size: 0.7rem;
       letter-spacing: 0.05em;
     }
@@ -378,21 +484,52 @@
     }
   </style>
 
-  <div ng-switch="installState.status" class="bell407-survey-stage">
-    <div class="bell407-survey-message" ng-switch-when="checking">
-      <h3>Checking surveying autopilot hardware…</h3>
-      <p>Please wait while the Bell 407 control system reports its hardware state.</p>
+  <div class="app-header">
+    <h3>Bell 407 Survey Autopilot</h3>
+    <div class="header-controls">
+      <button type="button" class="minimize-toggle" ng-click="toggleMinimized()" title="{{ uiState.minimized ? 'Restore survey controls' : 'Minimize app' }}">
+        <span ng-if="!uiState.minimized">&#9635;</span>
+        <span ng-if="uiState.minimized">&#9634;</span>
+      </button>
     </div>
-    <div class="bell407-survey-message error" ng-switch-when="missing">
-      <h3>Surveying Autopilot hardware not detected</h3>
-      <p>The Bell 407 surveying autopilot module is not available on the active vehicle. Install the required hardware and reload the app.</p>
+  </div>
+
+  <div class="minimized-summary" ng-if="uiState.minimized" ng-click="toggleMinimized()" title="Click to restore the surveying controls">
+    <div class="mini-title" ng-switch="installState.status">
+      <span ng-switch-when="checking">Checking hardware…</span>
+      <span ng-switch-when="missing">Hardware not detected</span>
+      <span ng-switch-default>{{ statusText }}</span>
     </div>
-    <div class="bell407-survey-wrapper" ng-switch-default ng-class="{'layout-compact': layout.compact, 'layout-stacked': layout.stacked}">
-      <section class="controls-panel">
-        <div class="panel-header">
-          <h3>Survey Pattern</h3>
-          <span ng-if="preview.altitude">{{ preview.altitude | number:0 }} m @ {{ preview.speed | number:0 }} m/s</span>
-        </div>
+    <div class="mini-line" ng-if="installState.status === 'ready' && previewReady">
+      {{ preview.altitude | number:0 }} m @ {{ preview.speed | number:0 }} m/s
+    </div>
+    <div class="mini-line" ng-if="installState.status === 'ready' && preview.finishMode">
+      Finish: {{ getFinishModeLabel(preview.finishMode) }}
+    </div>
+    <div class="mini-line" ng-if="installState.status === 'ready' && !previewReady">
+      Tap to configure the survey pattern
+    </div>
+    <div class="mini-line" ng-if="installState.status !== 'ready'">
+      Tap to open details
+    </div>
+  </div>
+
+  <div class="bell407-survey-stage" ng-if="!uiState.minimized">
+    <div ng-switch="installState.status" class="bell407-survey-stage-content">
+      <div class="bell407-survey-message" ng-switch-when="checking">
+        <h3>Checking surveying autopilot hardware…</h3>
+        <p>Please wait while the Bell 407 control system reports its hardware state.</p>
+      </div>
+      <div class="bell407-survey-message error" ng-switch-when="missing">
+        <h3>Surveying Autopilot hardware not detected</h3>
+        <p>The Bell 407 surveying autopilot module is not available on the active vehicle. Install the required hardware and reload the app.</p>
+      </div>
+      <div class="bell407-survey-wrapper" ng-switch-default ng-class="{'layout-compact': layout.compact, 'layout-stacked': layout.stacked}">
+        <section class="controls-panel">
+          <div class="panel-header">
+            <h3>Survey Pattern</h3>
+            <span ng-if="preview.altitude">{{ preview.altitude | number:0 }} m @ {{ preview.speed | number:0 }} m/s</span>
+          </div>
 
         <div class="parameter-grid" ng-class="{'compact': layout.compact}">
           <label>
@@ -419,10 +556,14 @@
             <span>Survey speed (m/s)</span>
             <input type="number" min="0" step="0.5" ng-model="params.speed" ng-change="onParamsChanged()" />
           </label>
-          <label>
+          <div class="select-field">
             <span>Finish behavior</span>
-            <select ng-model="params.finishMode" ng-options="mode.value as mode.label for mode in finishModes" ng-change="onParamsChanged()"></select>
-          </label>
+            <md-input-container class="compact-select" md-no-underline>
+              <md-select aria-label="Finish behavior" ng-model="params.finishMode" ng-change="onParamsChanged()">
+                <md-option ng-repeat="mode in finishModes" ng-value="mode.value">{{ mode.label }}</md-option>
+              </md-select>
+            </md-input-container>
+          </div>
           <label>
             <span>Transit speed (m/s)</span>
             <input type="number" min="0" step="0.5" ng-model="params.transitSpeed" ng-change="onParamsChanged()" placeholder="Auto" />
@@ -432,9 +573,7 @@
         <div class="start-section">
           <div class="start-header">
             <strong>Start point</strong>
-            <div class="status-badges" ng-if="preview.finishMode">
-              <div class="status-badge">{{ preview.finishMode | uppercase }}</div>
-            </div>
+            <div class="finish-info" ng-if="preview.finishMode">Finish: {{ getFinishModeLabel(preview.finishMode) }}</div>
           </div>
           <div class="coordinate-line" ng-if="startPoint">
             <span>X: {{ startPoint.x | number:1 }}</span>
@@ -449,6 +588,7 @@
             <span>Y: {{ homePoint.y | number:1 }}</span>
             <span>Z: {{ homePoint.z | number:1 }}</span>
           </div>
+          <div class="start-note info" ng-if="preview.finishMode">Finish behaviour: {{ getFinishModeLabel(preview.finishMode) }}</div>
           <div class="start-note" ng-if="homeStatus" ng-class="{'error': homeStatusState === 'error'}">{{ homeStatus }}</div>
           <div class="start-buttons">
             <button ng-click="useGroundMarker()" ng-disabled="loadingStart">{{ loadingStart ? 'Loading…' : 'Use Navigation Target' }}</button>
@@ -502,6 +642,7 @@
           </div>
         </div>
       </section>
+    </div>
     </div>
   </div>
 </div>
