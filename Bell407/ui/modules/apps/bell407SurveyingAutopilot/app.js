@@ -13,7 +13,7 @@ angular.module('beamng.apps')
       const INSTALL_CHECK_RETRY_DELAY = 300
       const VEHICLE_EVENT_INSTALL_CHECK_DELAY = 150
       const MINIMIZE_STORAGE_KEY = 'bell407SurveyUI.minimized'
-      const HOME_FETCH_LUA = 'return (function() local ext = extensions and extensions.surveyingAutopilot if ext and ext.getHome then return ext.getHome() end end)()'
+      const HOME_FETCH_LUA = '(function() local ext = extensions and extensions.surveyingAutopilot if ext and ext.getHome then return ext.getHome() end end)()'
 
       const defaultParams = {
         altitude: 120,

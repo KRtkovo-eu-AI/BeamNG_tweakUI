@@ -102,22 +102,32 @@ function M._setGroundMarker(x, y, z)
 end
 
 local function ensureGroundMarker()
-        if not groundMarker then
-            requestGroundMarker()
-        end
-        return groundMarker
+	if not groundMarker then
+		requestGroundMarker()
+	end
+	return groundMarker
 end
 
-local function ensureReady()
-        local ctrl = ensureController()
-        if not ctrl then
-                updateInstallState(false)
-                return nil, "missingPart"
-        end
-        if not ensureGroundMarker() then
-                return nil, "noTarget"
-        end
-        return ctrl
+local function ensureReady(options)
+	local ctrl = ensureController()
+	if not ctrl then
+		updateInstallState(false)
+		return nil, "missingPart"
+	end
+
+	local requireMarker = true
+	if options and options.requireMarker ~= nil then
+		requireMarker = options.requireMarker and true or false
+	end
+
+	if requireMarker then
+		local marker = ensureGroundMarker()
+		if not marker then
+			return nil, "noTarget"
+		end
+	end
+
+	return ctrl
 end
 
 local function getGroundHeight(pos)
@@ -162,19 +172,26 @@ end
 
 
 local function buildPatternPlan(params)
-        if not params then
-                return nil, "missingParams"
-        end
+	if not params then
+		return nil, "missingParams"
+	end
 
-        local ctrl, err = ensureReady()
-        if not ctrl then
-                return nil, err
-        end
+	local explicitStart = toPoint(params.startPoint)
+	local ctrl, err = ensureReady({requireMarker = explicitStart == nil})
+	if not ctrl then
+		return nil, err
+	end
 
-        local startPoint = toPoint(params.startPoint or groundMarker)
-        if not startPoint then
-                return nil, "invalidStart"
-        end
+	local startPoint = explicitStart or toPoint(groundMarker)
+	if not startPoint then
+		local marker = ensureGroundMarker()
+		if marker then
+			startPoint = toPoint(marker)
+		end
+	end
+	if not startPoint then
+		return nil, explicitStart and "invalidStart" or "noTarget"
+	end
 
         local altitude = params.altitude or startPoint.z or 0
         startPoint.z = altitude
@@ -353,7 +370,8 @@ local function configurePattern(params)
 end
 
 local function activate()
-        local ctrl, reason = ensureReady()
+        local requireMarker = not cachedPlan or not cachedPlan.start
+        local ctrl, reason = ensureReady({requireMarker = requireMarker})
         if not ctrl then
                 sendStatus({ok = false, reason = reason})
                 return false, reason
@@ -371,7 +389,8 @@ local function activate()
 end
 
 local function startSurvey()
-        local ctrl, reason = ensureReady()
+        local requireMarker = not cachedPlan or not cachedPlan.start
+        local ctrl, reason = ensureReady({requireMarker = requireMarker})
         if not ctrl then
                 sendStatus({ok = false, reason = reason})
                 return false, reason
