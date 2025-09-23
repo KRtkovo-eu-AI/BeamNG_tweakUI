@@ -76,7 +76,7 @@ local controlBindings = {
 
 local controlDirections = {lift = 1, pitch = 1, roll = 1, yaw = 1}
 
-local liftOrientationState = {locked = false, failTimer = 0, successTimer = 0, lastAltitude = nil}
+local liftOrientationState = {locked = false, failTimer = 0, successTimer = 0, lastAltitude = nil, lastAltitudeError = nil}
 
 local planIdCounter = 0
 
@@ -161,14 +161,20 @@ local function getVelocityComponents()
         return 0, 0, 0
 end
 
-local function resetLiftOrientationTracking()
+local function resetLiftOrientationTracking(forceDirection)
         liftOrientationState.failTimer = 0
         liftOrientationState.successTimer = 0
         liftOrientationState.lastAltitude = nil
-        liftOrientationState.locked = (controlDirections.lift ~= 1)
+        liftOrientationState.lastAltitudeError = nil
+        if forceDirection then
+                controlDirections.lift = forceDirection
+                liftOrientationState.locked = false
+        else
+                liftOrientationState.locked = (controlDirections.lift ~= 1)
+        end
 end
 
-local function resetControllers()
+local function resetControllers(forceDefaultLift)
         pitchPID:reset()
         rollPID:reset()
         yawPID:reset()
@@ -179,7 +185,7 @@ local function resetControllers()
         yawSmoother:reset()
         altitudeSmoother:reset()
 
-        resetLiftOrientationTracking()
+        resetLiftOrientationTracking(forceDefaultLift and 1 or nil)
 end
 
 local function releaseControls()
@@ -257,7 +263,7 @@ local function setState(newState, reason)
                 status.progress = 0
                 status.waypointIndex = 0
                 releaseControls()
-                resetControllers()
+                resetControllers(true)
         elseif newState == states.armed then
                 currentWaypoint = 1
                 currentTargetPos = nil
@@ -339,7 +345,7 @@ local function setState(newState, reason)
         elseif newState == states.complete then
                 currentTargetSpeed = 0
                 releaseControls()
-                resetControllers()
+                resetControllers(true)
         end
 end
 
@@ -466,14 +472,18 @@ local function getHeadingToTarget(currentPos, targetPos)
 end
 
 local function updateLiftOrientation(command, targetAltitude, currentAltitude, verticalVelocity, dt)
-        liftOrientationState.lastAltitude = currentAltitude or liftOrientationState.lastAltitude
-
         if liftOrientationState.locked then
                 return
         end
 
         if not targetAltitude or not currentAltitude then
                 resetLiftOrientationTracking()
+                return
+        end
+
+        if not liftOrientationState.lastAltitude then
+                liftOrientationState.lastAltitude = currentAltitude
+                liftOrientationState.lastAltitudeError = targetAltitude - currentAltitude
                 return
         end
 
@@ -484,6 +494,7 @@ local function updateLiftOrientation(command, targetAltitude, currentAltitude, v
                 liftOrientationState.failTimer = math.max(0, liftOrientationState.failTimer - dt)
                 liftOrientationState.successTimer = math.max(0, liftOrientationState.successTimer - dt)
                 liftOrientationState.lastAltitude = currentAltitude
+                liftOrientationState.lastAltitudeError = altitudeError
                 return
         end
 
@@ -493,24 +504,32 @@ local function updateLiftOrientation(command, targetAltitude, currentAltitude, v
                 liftOrientationState.failTimer = math.max(0, liftOrientationState.failTimer - dt)
                 liftOrientationState.successTimer = math.max(0, liftOrientationState.successTimer - dt)
                 liftOrientationState.lastAltitude = currentAltitude
+                liftOrientationState.lastAltitudeError = altitudeError
                 return
         end
 
+        local altitudeDelta = currentAltitude - liftOrientationState.lastAltitude
         local effectiveVelocity = verticalVelocity or 0
 
-        if liftOrientationState.lastAltitude then
-                local altitudeDelta = currentAltitude - liftOrientationState.lastAltitude
-                if math.abs(altitudeDelta) > 1e-4 then
-                        local derivedVelocity = altitudeDelta / math.max(dt, 1e-3)
-                        if math.abs(derivedVelocity) > math.abs(effectiveVelocity) then
-                                effectiveVelocity = derivedVelocity
-                        end
+        if math.abs(altitudeDelta) > 1e-4 then
+                local derivedVelocity = altitudeDelta / math.max(dt, 1e-3)
+                if math.abs(derivedVelocity) > math.abs(effectiveVelocity) then
+                        effectiveVelocity = derivedVelocity
                 end
         end
 
-        liftOrientationState.lastAltitude = currentAltitude
+        local directionalVelocity = effectiveVelocity * desiredDir
+        local directionalAltitudeDelta = altitudeDelta * desiredDir
+        local previousError = liftOrientationState.lastAltitudeError or altitudeError
+        local directionalErrorDelta = (altitudeError - previousError) * desiredDir
 
-        if effectiveVelocity * desiredDir < -0.1 then
+        liftOrientationState.lastAltitude = currentAltitude
+        liftOrientationState.lastAltitudeError = altitudeError
+
+        local improving = directionalAltitudeDelta > 0.02 or directionalErrorDelta < -0.05
+        local degrading = directionalAltitudeDelta < -0.02 or directionalErrorDelta > 0.05
+
+        if degrading and directionalVelocity < -0.05 then
                 liftOrientationState.failTimer = liftOrientationState.failTimer + dt
                 liftOrientationState.successTimer = math.max(0, liftOrientationState.successTimer - dt * 0.5)
                 if liftOrientationState.failTimer > 0.35 then
@@ -520,7 +539,7 @@ local function updateLiftOrientation(command, targetAltitude, currentAltitude, v
                         liftOrientationState.successTimer = 0
                         markStatusEvent("liftOrientation", {direction = controlDirections.lift})
                 end
-        elseif effectiveVelocity * desiredDir > 0.05 then
+        elseif improving and directionalVelocity > 0.02 then
                 liftOrientationState.successTimer = liftOrientationState.successTimer + dt
                 liftOrientationState.failTimer = math.max(0, liftOrientationState.failTimer - dt * 0.5)
                 if liftOrientationState.successTimer > 0.4 then
