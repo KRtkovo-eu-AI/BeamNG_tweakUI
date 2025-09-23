@@ -1,7 +1,7 @@
 {
   "name": "Traffic Performance Fix",
-  "description": "Optimizes AI traffic driving analysis to avoid the stutters introduced in BeamNG.drive 0.37.",
-  "version": "1.0",
+  "description": "Restores 0.36-style traffic tracking with adaptive AI caching and log instrumentation for BeamNG.drive 0.37.",
+  "version": "1.1",
   "authors": ["BeamNG_tweakUI Modding"],
   "contact": "",
   "type": "Modification",

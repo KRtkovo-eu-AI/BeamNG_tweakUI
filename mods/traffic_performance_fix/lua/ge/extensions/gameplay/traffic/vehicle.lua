@@ -11,6 +11,14 @@ local huge = math.huge
 local C = {}
 
 local logTag = 'traffic'
+local fixLogPrefix = '[TrafficPerformanceFix]'
+local fixVersion = '1.1.0'
+local aiMidDistance = 250
+local aiFarDistance = 500
+local aiMidInterval = 0.5
+local aiFarInterval = 1
+
+log('I', logTag, string.format('%s loaded optimized traffic vehicle override v%s', fixLogPrefix, fixVersion))
 local daylightValues = {0.22, 0.78} -- sunset & sunrise
 local damageLimits = {50, 1000, 30000} -- minor damage, stop damage, major damage
 local lowSpeed = 2.5
@@ -163,6 +171,8 @@ function C:resetValues()
     staticVisibility = 1 -- world visibility value (lower if occluded)
   }
   self.queuedFuncs = {} -- keys: timer, func, args, vLua (vLua string overrides func and args)
+  self._aiTrackCache = nil
+  self._aiTrackCooldown = nil
 end
 
 function C:resetElectrics()
@@ -442,148 +452,220 @@ function C:trackDriving(dt, fullTracking) -- basic tracking for how a vehicle dr
   local mapNodes = map.getMap().nodes
   local mapRules = map.getRoadRules()
 
-  local n1, n2 = map.findClosestRoad(self.pos) -- may not be accurate at junctions
-  local legalSide = mapRules.rightHandDrive and -1 or 1 -- negative if left side, positive if right side
-  if n1 and mapNodes[n1] then
-    ---- basic road tracking ----
-    local link = mapNodes[n1].links[n2] or mapNodes[n2].links[n1]
-    self.tracking.isPublicRoad = link.type ~= 'private' and link.drivability >= 0.25
-    self.tracking.speedLimit = max(5.556, link.speedLimit)
-    local overSpeedValue = clamp(self.speed / self.tracking.speedLimit, 1, 3) * dt * 0.1
+  local n1, n2, link
+  local usingCache = false
+  local aiTargetInterval
 
-    if self.tracking.isPublicRoad and self.speed >= self.tracking.speedLimit * 1.2 then
-      self.tracking.speedScore = max(0, self.tracking.speedScore - overSpeedValue)
-    else
-      self.tracking.speedScore = min(1, self.tracking.speedScore + overSpeedValue)
+  if not fullTracking then
+    if not self._trafficFixAiLogged then
+      log('I', logTag, string.format('%s lightweight AI tracking enabled for vehicle %d', fixLogPrefix, self.id))
+      self._trafficFixAiLogged = true
     end
 
-    if fullTracking then
-      tempDirVec:setSub2(mapNodes[n2].pos, mapNodes[n1].pos)
-      if (link.oneWay and link.inNode == n2) or (not link.oneWay and tempDirVec:dot(self.driveVec) < 0) then
-        n1, n2 = n2, n1
-        tempDirVec:setScaled(-1)
+    local focusDist = self.focusDist or huge
+    if focusDist > aiFarDistance then
+      aiTargetInterval = aiFarInterval
+    elseif focusDist > aiMidDistance then
+      aiTargetInterval = aiMidInterval
+    else
+      aiTargetInterval = tickTime
+    end
+
+    local cooldown = self._aiTrackCooldown
+    local cache = self._aiTrackCache
+    if cooldown and cache then
+      if cooldown > aiTargetInterval then
+        cooldown = aiTargetInterval
       end
-
-      self.tracking.node1, self.tracking.node2 = n1, n2
-      local p1, p2 = mapNodes[n1].pos, mapNodes[n2].pos
-      local xnorm = clamp(self.pos:xnormOnLine(p1, p2), 0, 1)
-      local radius = lerp(mapNodes[n1].radius, mapNodes[n2].radius, xnorm)
-      tempPos:setLerp(p1, p2, xnorm)
-      self.tracking.isOnRoad = self.pos:squaredDistance(tempPos) <= square(radius + 1) -- small buffer at edge of road
-
-      ---- vehicle alignment on road ----
-      tempDirVec:normalize()
-      self.tracking.alignment = self.driveVec:dot(tempDirVec) -- almost 1 if parallel to road
-
-      roadPos:setCross(tempDirVec, map.surfaceNormal(tempPos))
-      roadPos:setScaled(radius)
-      roadPos:setAdd2(tempPos, roadPos) -- right edge of road
-      self.tracking.sideOffset = self.pos:xnormOnLine(tempPos, roadPos) -- relative to center of road
-
-      if self.tracking.isPublicRoad then -- only sets drive score if the road is public
-        if self.speed > lowSpeed * 2 and self.tracking.isOnRoad and abs(self.tracking.alignment) > 0.707 then -- player is driving parallel on the road
-          if not link.oneWay then
-            -- WARNING: this is wrong if the actual road dividing line is not in the center!
-            self.tracking.side = self.tracking.sideOffset * legalSide > 0 and 1 or -1 -- legal or illegal side
-          else
-            self.tracking.side = self.tracking.alignment > 0 and 1 or -2 -- legal or illegal direction
-          end
-        else
-          self.tracking.side = 1
-        end
-
-        local speedCoef = min(2, self.speed / self.tracking.speedLimit)
-
-        -- reduces score if player is driving at speed on wrong side of the road (no logic for overtaking yet)
-        -- TODO: in the future, track wrong side and wrong way separately
-        if self.tracking.side < 0 then
-          self.tracking.directionScore = max(0, self.tracking.directionScore + self.tracking.side * dt * speedCoef * 0.08) -- decreases faster if wrong way on oneWay
-        else
-          self.tracking.directionScore = min(1, self.tracking.directionScore + dt * 0.05)
-        end
-
-        -- reduces score if player is driving recklessly (rapidly crossing lanes, doing donuts, etc.)
-        if self.tracking.side ~= self.tracking.lastSide then
-          self.tracking.driveScore = max(0, self.tracking.driveScore - dt * speedCoef * 0.32) -- decreases every time the vehicle switches from legal side to illegal side
-        else
-          self.tracking.driveScore = min(1, self.tracking.driveScore + dt * 0.025)
+      cooldown = cooldown - dt
+      if cooldown > 0 then
+        n1, n2, link = cache.n1, cache.n2, cache.link
+        if n1 and link and mapNodes[n1] then
+          self.tracking.isPublicRoad = cache.isPublicRoad
+          self.tracking.speedLimit = cache.speedLimit
+          self._aiTrackCooldown = cooldown
+          usingCache = true
         end
       else
-        self.tracking.side, self.tracking.driveScore, self.tracking.directionScore = 1, 1, 1
-      end
-
-      ---- traffic signals ----
-      if core_trafficSignals then
-        if self.tracking.signalFault then
-          self.tracking.signalFault = nil -- resets after one frame
-        end
-
-        local mapNodeSignals = core_trafficSignals.getMapNodeSignals()
-        if not self.tracking.signal and mapNodeSignals[n1] and mapNodeSignals[n1][n2] then
-          for _, signal in ipairs(mapNodeSignals[n1][n2]) do -- get best signal from current road segment
-            -- TODO: this can be problematic if the navgraph network is complex or overlapping
-            local bestDist = 400
-            local dist = self.pos:squaredDistance(signal.pos)
-            if dist < bestDist then
-              bestDist = dist
-              self.tracking.signal = signal
-              self.tracking.signalAction = nil
-              self.tracking.signalFault = nil
-            end
-          end
-        end
-
-        local signal = self.tracking.signal
-        if signal then
-          local instance = core_trafficSignals.getSignalByName(signal.instance)
-          if instance and instance.targetPos then
-            local signalSpeedLimit = max(14, self.tracking.speedLimit)
-            local minDot = self.tracking.signalAction and 0 or 0.707 -- should be 0 after the vehicle passed the signal point
-            local valid, data = instance:isVehAfterSignal(self.id, 20, minDot)
-            if data then
-              if valid then -- vehicle is after signal point
-                if not self.tracking.signalAction then
-                  self.tracking.signalAction = signal.action
-                  if signal.action == 3 and self.speed > signalSpeedLimit then -- if speed is high enough, trigger the stop sign violation (strongly prevents false positives)
-                    self.tracking.signalFault = instance.name
-                  end
-                end
-              elseif data.relDist > 0 then -- vehicle exited signal bounds
-                if self.tracking.signalAction == 2 then
-                  if self.speed > signalSpeedLimit then -- if speed is high enough, always trigger the red light violation
-                    self.tracking.signalFault = instance.name
-                  else -- otherwise, check if the vehicle made a turn
-                    tempDirVec:setCross(instance.dir, vecUp)
-                    tempDirVec:setScaled(-legalSide)
-                    tempDirVec:setAdd(instance.dir)
-                    tempDirVec:normalize()
-                    if self.driveVec:dot(tempDirVec) > 0 then
-                      self.tracking.signalFault = instance.name
-                    end
-                  end
-                end
-
-                self.tracking.signal = nil -- reset signal tracking
-              end
-            end
-          end
-        end
+        self._aiTrackCooldown = 0
       end
     else
-      -- skip heavy tracking for traffic AI to avoid unnecessary workload
-      self.tracking.node1, self.tracking.node2 = nil, nil
-      self.tracking.isOnRoad = nil
-      self.tracking.alignment = 1
-      self.tracking.sideOffset = 0
-      self.tracking.side = 1
-      if not self.tracking.isPublicRoad then
-        self.tracking.driveScore, self.tracking.directionScore = 1, 1
+      self._aiTrackCooldown = 0
+    end
+  else
+    self._aiTrackCache = nil
+    self._aiTrackCooldown = nil
+  end
+
+  if not usingCache then
+    n1, n2 = map.findClosestRoad(self.pos) -- may not be accurate at junctions
+    if n1 and mapNodes[n1] then
+      link = mapNodes[n1].links[n2] or mapNodes[n2].links[n1]
+      self.tracking.isPublicRoad = link.type ~= 'private' and link.drivability >= 0.25
+      self.tracking.speedLimit = max(5.556, link.speedLimit)
+      if not fullTracking then
+        local interval = aiTargetInterval or tickTime
+        local newCache = self._aiTrackCache or {}
+        newCache.n1, newCache.n2 = n1, n2
+        newCache.link = link
+        newCache.isPublicRoad = self.tracking.isPublicRoad
+        newCache.speedLimit = self.tracking.speedLimit
+        self._aiTrackCache = newCache
+        self._aiTrackCooldown = interval
       end
-      self.tracking.signal = nil
-      self.tracking.signalAction = nil
-      self.tracking.signalFault = nil
+    else
+      if not fullTracking then
+        self._aiTrackCache = nil
+        self._aiTrackCooldown = 0
+      end
     end
   end
+
+  if not (n1 and mapNodes[n1] and link) then
+    self.tracking.lastSide = self.tracking.side
+    if self.tracking.delay < 0 then
+      self.tracking.delay = min(0, self.tracking.delay + dt)
+    end
+    return
+  end
+
+  ---- basic road tracking ----
+  local legalSide = mapRules.rightHandDrive and -1 or 1 -- negative if left side, positive if right side
+  local overSpeedValue = clamp(self.speed / self.tracking.speedLimit, 1, 3) * dt * 0.1
+
+  if self.tracking.isPublicRoad and self.speed >= self.tracking.speedLimit * 1.2 then
+    self.tracking.speedScore = max(0, self.tracking.speedScore - overSpeedValue)
+  else
+    self.tracking.speedScore = min(1, self.tracking.speedScore + overSpeedValue)
+  end
+
+  if fullTracking then
+    tempDirVec:setSub2(mapNodes[n2].pos, mapNodes[n1].pos)
+    if (link.oneWay and link.inNode == n2) or (not link.oneWay and tempDirVec:dot(self.driveVec) < 0) then
+      n1, n2 = n2, n1
+      tempDirVec:setScaled(-1)
+    end
+
+    self.tracking.node1, self.tracking.node2 = n1, n2
+    local p1, p2 = mapNodes[n1].pos, mapNodes[n2].pos
+    local xnorm = clamp(self.pos:xnormOnLine(p1, p2), 0, 1)
+    local radius = lerp(mapNodes[n1].radius, mapNodes[n2].radius, xnorm)
+    tempPos:setLerp(p1, p2, xnorm)
+    self.tracking.isOnRoad = self.pos:squaredDistance(tempPos) <= square(radius + 1) -- small buffer at edge of road
+
+    ---- vehicle alignment on road ----
+    tempDirVec:normalize()
+    self.tracking.alignment = self.driveVec:dot(tempDirVec) -- almost 1 if parallel to road
+
+    roadPos:setCross(tempDirVec, map.surfaceNormal(tempPos))
+    roadPos:setScaled(radius)
+    roadPos:setAdd2(tempPos, roadPos) -- right edge of road
+    self.tracking.sideOffset = self.pos:xnormOnLine(tempPos, roadPos) -- relative to center of road
+
+    if self.tracking.isPublicRoad then -- only sets drive score if the road is public
+      if self.speed > lowSpeed * 2 and self.tracking.isOnRoad and abs(self.tracking.alignment) > 0.707 then -- player is driving parallel on the road
+        if not link.oneWay then
+          -- WARNING: this is wrong if the actual road dividing line is not in the center!
+          self.tracking.side = self.tracking.sideOffset * legalSide > 0 and 1 or -1 -- legal or illegal side
+        else
+          self.tracking.side = self.tracking.alignment > 0 and 1 or -2 -- legal or illegal direction
+        end
+      else
+        self.tracking.side = 1
+      end
+
+      local speedCoef = min(2, self.speed / self.tracking.speedLimit)
+
+      -- reduces score if player is driving at speed on wrong side of the road (no logic for overtaking yet)
+      -- TODO: in the future, track wrong side and wrong way separately
+      if self.tracking.side < 0 then
+        self.tracking.directionScore = max(0, self.tracking.directionScore + self.tracking.side * dt * speedCoef * 0.08) -- decreases faster if wrong way on oneWay
+      else
+        self.tracking.directionScore = min(1, self.tracking.directionScore + dt * 0.05)
+      end
+
+      -- reduces score if player is driving recklessly (rapidly crossing lanes, doing donuts, etc.)
+      if self.tracking.side ~= self.tracking.lastSide then
+        self.tracking.driveScore = max(0, self.tracking.driveScore - dt * speedCoef * 0.32) -- decreases every time the vehicle switches from legal side to illegal side
+      else
+        self.tracking.driveScore = min(1, self.tracking.driveScore + dt * 0.025)
+      end
+    else
+      self.tracking.side, self.tracking.driveScore, self.tracking.directionScore = 1, 1, 1
+    end
+
+    ---- traffic signals ----
+    if core_trafficSignals then
+      if self.tracking.signalFault then
+        self.tracking.signalFault = nil -- resets after one frame
+      end
+
+      local mapNodeSignals = core_trafficSignals.getMapNodeSignals()
+      if not self.tracking.signal and mapNodeSignals[n1] and mapNodeSignals[n1][n2] then
+        for _, signal in ipairs(mapNodeSignals[n1][n2]) do -- get best signal from current road segment
+          -- TODO: this can be problematic if the navgraph network is complex or overlapping
+          local bestDist = 400
+          local dist = self.pos:squaredDistance(signal.pos)
+          if dist < bestDist then
+            bestDist = dist
+            self.tracking.signal = signal
+            self.tracking.signalAction = nil
+            self.tracking.signalFault = nil
+          end
+        end
+      end
+
+      local signal = self.tracking.signal
+      if signal then
+        local instance = core_trafficSignals.getSignalByName(signal.instance)
+        if instance and instance.targetPos then
+          local signalSpeedLimit = max(14, self.tracking.speedLimit)
+          local minDot = self.tracking.signalAction and 0 or 0.707 -- should be 0 after the vehicle passed the signal point
+          local valid, data = instance:isVehAfterSignal(self.id, 20, minDot)
+          if data then
+            if valid then -- vehicle is after signal point
+              if not self.tracking.signalAction then
+                self.tracking.signalAction = signal.action
+                if signal.action == 3 and self.speed > signalSpeedLimit then -- if speed is high enough, trigger the stop sign violation (strongly prevents false positives)
+                  self.tracking.signalFault = instance.name
+                end
+              end
+            elseif data.relDist > 0 then -- vehicle exited signal bounds
+              if self.tracking.signalAction == 2 then
+                if self.speed > signalSpeedLimit then -- if speed is high enough, always trigger the red light violation
+                  self.tracking.signalFault = instance.name
+                else -- otherwise, check if the vehicle made a turn
+                  tempDirVec:setCross(instance.dir, vecUp)
+                  tempDirVec:setScaled(-legalSide)
+                  tempDirVec:setAdd(instance.dir)
+                  tempDirVec:normalize()
+                  if self.driveVec:dot(tempDirVec) > 0 then
+                    self.tracking.signalFault = instance.name
+                  end
+                end
+              end
+
+              self.tracking.signal = nil -- reset signal tracking
+            end
+          end
+        end
+      end
+    end
+  else
+    -- skip heavy tracking for traffic AI to avoid unnecessary workload
+    self.tracking.node1, self.tracking.node2 = nil, nil
+    self.tracking.isOnRoad = nil
+    self.tracking.alignment = 1
+    self.tracking.sideOffset = 0
+    self.tracking.side = 1
+    if not self.tracking.isPublicRoad then
+      self.tracking.driveScore, self.tracking.directionScore = 1, 1
+    end
+    self.tracking.signal = nil
+    self.tracking.signalAction = nil
+    self.tracking.signalFault = nil
+  end
+
   self.tracking.lastSide = self.tracking.side
 
   if self.tracking.delay < 0 then
