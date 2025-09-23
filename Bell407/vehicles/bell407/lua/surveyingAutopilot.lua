@@ -8,6 +8,7 @@ local groundMarker = nil
 local homePosition = nil
 local lastMarkerRequest = 0
 local lastInstallReported = nil
+local cachedMapModule = rawget(_G, "map")
 
 local function copyTable(data)
         if type(data) ~= "table" then return data end
@@ -31,6 +32,110 @@ local function toPoint(value)
                 return {x = value[1], y = value[2], z = value[3] or 0}
         end
         return nil
+end
+
+local function to2DComponents(value)
+        if not value then return nil, nil end
+        if value.x then
+                return value.x, value.y
+        end
+        if value[1] then
+                return value[1], value[2]
+        end
+        return nil, nil
+end
+
+local function extendBounds(bounds, point)
+        if not point then return end
+        local x, y = to2DComponents(point)
+        if not x or not y then return end
+        if not bounds.minX or x < bounds.minX then bounds.minX = x end
+        if not bounds.maxX or x > bounds.maxX then bounds.maxX = x end
+        if not bounds.minY or y < bounds.minY then bounds.minY = y end
+        if not bounds.maxY or y > bounds.maxY then bounds.maxY = y end
+end
+
+local function computePlanBounds(startPoint, patternPoints, home, finalHover)
+        local bounds = {minX = nil, maxX = nil, minY = nil, maxY = nil}
+        extendBounds(bounds, startPoint)
+        extendBounds(bounds, home)
+        extendBounds(bounds, finalHover)
+        if patternPoints then
+                for _, entry in ipairs(patternPoints) do
+                        if entry and entry.pos then
+                                extendBounds(bounds, entry.pos)
+                        elseif entry then
+                                extendBounds(bounds, entry)
+                        end
+                end
+        end
+        if not bounds.minX then
+                return nil
+        end
+        local spanX = (bounds.maxX or bounds.minX) - bounds.minX
+        local spanY = (bounds.maxY or bounds.minY) - bounds.minY
+        local padding = math.max(40, math.max(spanX, spanY) * 0.25)
+        bounds.minX = bounds.minX - padding
+        bounds.maxX = bounds.maxX + padding
+        bounds.minY = bounds.minY - padding
+        bounds.maxY = bounds.maxY + padding
+        bounds.padding = padding
+        return bounds
+end
+
+local function getMapData()
+        local mapModule = rawget(_G, "map") or cachedMapModule
+        if mapModule and mapModule.getMap then
+                cachedMapModule = mapModule
+                return mapModule.getMap()
+        end
+        return nil
+end
+
+local function collectMapSegments(bounds)
+        if not bounds then return {} end
+        local nav = getMapData()
+        if not nav or not nav.nodes then
+                return {}
+        end
+        local minX, maxX, minY, maxY = bounds.minX, bounds.maxX, bounds.minY, bounds.maxY
+        if not (minX and maxX and minY and maxY) then
+                return {}
+        end
+        local segments = {}
+        local seen = {}
+        for nodeId, node in pairs(nav.nodes) do
+                local pos = node and node.pos
+                local px, py = to2DComponents(pos)
+                if px and py and px >= minX and px <= maxX and py >= minY and py <= maxY then
+                        local links = node.links
+                        if links then
+                                for targetId, _ in pairs(links) do
+                                        local other = nav.nodes[targetId]
+                                        local ox, oy = to2DComponents(other and other.pos)
+                                        if ox and oy and ox >= minX and ox <= maxX and oy >= minY and oy <= maxY then
+                                                local a, b = tostring(nodeId), tostring(targetId)
+                                                if a > b then
+                                                        a, b = b, a
+                                                end
+                                                local key = a .. "|" .. b
+                                                if not seen[key] then
+                                                        seen[key] = true
+                                                        local dx = ox - px
+                                                        local dy = oy - py
+                                                        if dx * dx + dy * dy > 0.01 then
+                                                                segments[#segments + 1] = {{px, py}, {ox, oy}}
+                                                                if #segments >= 400 then
+                                                                        return segments
+                                                                end
+                                                        end
+                                                end
+                                        end
+                                end
+                        end
+                end
+        end
+        return segments
 end
 
 local function updateInstallState(installed)
@@ -320,6 +425,16 @@ local function buildPatternPlan(params)
                 totalLength = totalLength
         }
 
+        local bounds = computePlanBounds(plan.start, plan.patternPoints, plan.home, plan.finalHoverPos)
+        if bounds then
+                plan.bounds = copyTable(bounds)
+        end
+
+        local mapSegments = collectMapSegments(bounds)
+        if mapSegments and #mapSegments > 0 then
+                plan.mapSegments = copyTable(mapSegments)
+        end
+
         local preview = {
                 ok = true,
                 start = {startPoint.x, startPoint.y, startPoint.z},
@@ -331,6 +446,14 @@ local function buildPatternPlan(params)
                 rotorRPM = rotorRPM,
                 waypoints = previewWaypoints
         }
+
+        if bounds then
+                preview.bounds = {minX = bounds.minX, maxX = bounds.maxX, minY = bounds.minY, maxY = bounds.maxY}
+        end
+
+        if mapSegments and #mapSegments > 0 then
+                preview.mapSegments = copyTable(mapSegments)
+        end
 
         return plan, preview
 end

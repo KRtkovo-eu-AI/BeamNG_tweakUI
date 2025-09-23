@@ -602,8 +602,13 @@ local function controlToTarget(dt)
         local desiredVelX = dirX * desiredSpeed
         local desiredVelY = dirY * desiredSpeed
 
-        local pitchTarget = clamp(localX * 0.02 + (desiredVelX - velX) * 0.12, -0.45, 0.45)
-        local rollTarget = clamp(localY * 0.02 + (desiredVelY - velY) * 0.12, -0.45, 0.45)
+        local forwardPosition = clamp(localX * 0.015, -0.3, 0.3)
+        local forwardVelocity = clamp((desiredVelX - velX) * 0.12, -0.3, 0.3)
+        local lateralPosition = clamp(localY * 0.015, -0.3, 0.3)
+        local lateralVelocity = clamp((desiredVelY - velY) * 0.12, -0.3, 0.3)
+
+        local pitchTarget = clamp(-(forwardPosition + forwardVelocity), -0.35, 0.35)
+        local rollTarget = clamp(lateralPosition + lateralVelocity, -0.35, 0.35)
 
         local pitchOut = pitchPID:get(pitchSmoothed, pitchTarget, dt)
         local rollOut = rollPID:get(rollSmoothed, rollTarget, dt)
@@ -613,13 +618,14 @@ local function controlToTarget(dt)
                 targetHeading = getHeadingToTarget(pos, currentTargetPos)
         end
 
-        local liftOutput = clamp(altOutput, -1, 1)
+        local verticalDamping = clamp(-velZRaw * 0.12, -0.25, 0.25)
+        local liftOutput = clamp(altOutput + verticalDamping, -1, 1)
         local pitchOutput = clamp(pitchOut, -1, 1)
         local rollOutput = clamp(rollOut, -1, 1)
         local yawOutput = lastOutputs.yaw or 0
 
         if targetHeading then
-                local yawSetpoint = yaw + clamp(normalizeAngle(targetHeading - yaw), -0.6, 0.6)
+                local yawSetpoint = yaw + clamp(normalizeAngle(targetHeading - yaw), -0.45, 0.45)
                 local yawOut = yawPID:get(yawSmoothed, yawSetpoint, dt)
                 yawOutput = clamp(yawOut, -1, 1)
         end

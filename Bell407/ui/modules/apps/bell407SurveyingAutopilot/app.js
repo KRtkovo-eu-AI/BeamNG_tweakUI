@@ -46,7 +46,9 @@ angular.module('beamng.apps')
         start: null,
         points: [],
         heading: 0,
-        home: null
+        home: null,
+        mapSegments: [],
+        bounds: null
       }
 
       const stateLabels = {
@@ -178,6 +180,30 @@ angular.module('beamng.apps')
         }
       }
 
+      function cloneBounds(source) {
+        if (!source || typeof source !== 'object') return null
+        const minX = toNumber(source.minX, NaN)
+        const maxX = toNumber(source.maxX, NaN)
+        const minY = toNumber(source.minY, NaN)
+        const maxY = toNumber(source.maxY, NaN)
+        if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minY) || !Number.isFinite(maxY)) {
+          return null
+        }
+        return { minX, maxX, minY, maxY }
+      }
+
+      function cloneSegment(segment) {
+        if (!segment) return null
+        let startSource = segment.a || segment[0]
+        let endSource = segment.b || segment[1]
+        if (!startSource && segment.start) startSource = segment.start
+        if (!endSource && segment.finish) endSource = segment.finish
+        const start = clonePoint(startSource)
+        const finish = clonePoint(endSource)
+        if (!start || !finish) return null
+        return { a: start, b: finish }
+      }
+
       function applyHomePoint(result, options) {
         const point = clonePoint(result)
         if (!point) {
@@ -273,6 +299,13 @@ angular.module('beamng.apps')
             if (pt) points.push(pt)
           })
         }
+        if (patternGeometry.mapSegments && patternGeometry.mapSegments.length) {
+          patternGeometry.mapSegments.forEach(function (segment) {
+            if (!segment) return
+            if (segment.a) points.push(segment.a)
+            if (segment.b) points.push(segment.b)
+          })
+        }
         if ($scope.vehicle.position) points.push($scope.vehicle.position)
         if (patternGeometry.home) points.push(patternGeometry.home)
         if (points.length > 0) return points
@@ -307,28 +340,39 @@ angular.module('beamng.apps')
         ctx.fillRect(0, 0, width, height)
 
         const points = gatherPatternPoints()
-        if (!points.length) {
+        const bounds = patternGeometry.bounds
+        let minX
+        let maxX
+        let minY
+        let maxY
+        let padding = 0
+
+        if (bounds && Number.isFinite(bounds.minX) && Number.isFinite(bounds.maxX) && Number.isFinite(bounds.minY) && Number.isFinite(bounds.maxY)) {
+          minX = bounds.minX
+          maxX = bounds.maxX
+          minY = bounds.minY
+          maxY = bounds.maxY
+        } else if (points.length) {
+          minX = points[0].x
+          maxX = points[0].x
+          minY = points[0].y
+          maxY = points[0].y
+          points.forEach(function (p) {
+            if (!p) return
+            if (p.x < minX) minX = p.x
+            if (p.x > maxX) maxX = p.x
+            if (p.y < minY) minY = p.y
+            if (p.y > maxY) maxY = p.y
+          })
+          padding = Math.max(12, Math.max(maxX - minX, maxY - minY) * 0.2)
+          minX -= padding
+          maxX += padding
+          minY -= padding
+          maxY += padding
+        } else {
           ctx.restore()
           return
         }
-
-        let minX = points[0].x
-        let maxX = points[0].x
-        let minY = points[0].y
-        let maxY = points[0].y
-        points.forEach(function (p) {
-          if (!p) return
-          if (p.x < minX) minX = p.x
-          if (p.x > maxX) maxX = p.x
-          if (p.y < minY) minY = p.y
-          if (p.y > maxY) maxY = p.y
-        })
-
-        const padding = Math.max(12, Math.max(maxX - minX, maxY - minY) * 0.2)
-        minX -= padding
-        maxX += padding
-        minY -= padding
-        maxY += padding
 
         const spanX = Math.max(maxX - minX, 1)
         const spanY = Math.max(maxY - minY, 1)
@@ -361,6 +405,21 @@ angular.module('beamng.apps')
           ctx.lineTo(sy2.x, sy2.y)
         }
         ctx.stroke()
+
+        if (patternGeometry.mapSegments && patternGeometry.mapSegments.length > 0) {
+          const roadWidth = Math.max(0.8, Math.min(3.5, scale * 0.15))
+          ctx.strokeStyle = 'rgba(120, 160, 200, 0.5)'
+          ctx.lineWidth = roadWidth
+          ctx.beginPath()
+          patternGeometry.mapSegments.forEach(function (segment) {
+            if (!segment || !segment.a || !segment.b) return
+            const startScreen = toScreen(segment.a)
+            const endScreen = toScreen(segment.b)
+            ctx.moveTo(startScreen.x, startScreen.y)
+            ctx.lineTo(endScreen.x, endScreen.y)
+          })
+          ctx.stroke()
+        }
 
         // draw pattern polyline
         if (patternGeometry.points && patternGeometry.points.length > 0) {
@@ -599,9 +658,21 @@ angular.module('beamng.apps')
 
       function setPatternGeometryFromPreview(preview) {
         patternGeometry.start = clonePoint(preview.start || $scope.startPoint)
-        patternGeometry.points = (preview.waypoints || []).map(clonePoint)
+        patternGeometry.points = []
+        (preview.waypoints || []).forEach(function (wp) {
+          const point = clonePoint(wp)
+          if (point) patternGeometry.points.push(point)
+        })
         patternGeometry.heading = toNumber(preview.heading, 0)
         patternGeometry.home = clonePoint(preview.home)
+        patternGeometry.bounds = cloneBounds(preview.bounds)
+        patternGeometry.mapSegments = []
+        if (Array.isArray(preview.mapSegments)) {
+          preview.mapSegments.forEach(function (segment) {
+            const mapped = cloneSegment(segment)
+            if (mapped) patternGeometry.mapSegments.push(mapped)
+          })
+        }
         if (!patternGeometry.start && patternGeometry.points.length > 0) {
           patternGeometry.start = clonePoint(patternGeometry.points[0])
         }
@@ -751,6 +822,9 @@ angular.module('beamng.apps')
         $scope.preview = { altitude: null, speed: null, finishMode: null, rotorRPM: 380, heading: 0, waypoints: [] }
         patternGeometry.start = null
         patternGeometry.points = []
+        patternGeometry.mapSegments = []
+        patternGeometry.bounds = null
+        patternGeometry.heading = 0
         patternGeometry.home = preservedHome
         $scope.status = angular.copy(defaultStatus)
         $scope.statusText = stateLabels.idle
