@@ -9,6 +9,10 @@ angular.module('beamng.apps')
       const streamsList = ['sensors', 'electrics']
       StreamsManager.add(streamsList)
 
+      const MAX_INSTALL_CHECK_ATTEMPTS = 3
+      const INSTALL_CHECK_RETRY_DELAY = 300
+      const VEHICLE_EVENT_INSTALL_CHECK_DELAY = 150
+
       const defaultParams = {
         altitude: 120,
         angle: 0,
@@ -91,6 +95,8 @@ angular.module('beamng.apps')
       let completionTimer = null
       let resizeObserver = null
       let drawPending = null
+      let pendingInstallCheck = null
+      let installCheckAttempts = 0
 
       const mapState = {
         canvas: null,
@@ -375,6 +381,26 @@ angular.module('beamng.apps')
         $scope.installState.status = state
       }
 
+      function cancelScheduledInstallCheck() {
+        if (pendingInstallCheck) {
+          $timeout.cancel(pendingInstallCheck)
+          pendingInstallCheck = null
+        }
+      }
+
+      function scheduleInstallCheck(delay, resetAttempts) {
+        if (resetAttempts !== false) {
+          installCheckAttempts = 0
+        }
+        cancelScheduledInstallCheck()
+        pendingInstallCheck = $timeout(function () {
+          pendingInstallCheck = null
+          installCheckAttempts += 1
+          setInstallState('checking')
+          requestInstallCheck()
+        }, typeof delay === 'number' ? delay : 0)
+      }
+
       function runOnActive(command, callback) {
         if (!bngApi || !bngApi.activeObjectLua) {
           if (typeof callback === 'function') callback(null)
@@ -624,14 +650,41 @@ angular.module('beamng.apps')
         runOnActive('extensions.surveyingAutopilot and extensions.surveyingAutopilot.isInstalled()', function (result) {
           $scope.$evalAsync(function () {
             if (result) {
+              installCheckAttempts = 0
+              cancelScheduledInstallCheck()
               setInstallState('ready')
               queuePreview()
+            } else if (installCheckAttempts < MAX_INSTALL_CHECK_ATTEMPTS) {
+              scheduleInstallCheck(INSTALL_CHECK_RETRY_DELAY, false)
             } else {
+              installCheckAttempts = 0
               setInstallState('missing')
             }
           })
         })
       }
+
+      $scope.$on('bell407SurveyInstallState', function (event, data) {
+        if (data && data.module && data.module !== 'surveyingAutopilot') return
+        $scope.$evalAsync(function () {
+          const installedFlag = data && typeof data.installed === 'boolean' ? data.installed : null
+          if (installedFlag === true) {
+            cancelScheduledInstallCheck()
+            installCheckAttempts = 0
+            if ($scope.installState.status !== 'ready') {
+              setInstallState('ready')
+            }
+            queuePreview()
+          } else if (installedFlag === false) {
+            cancelScheduledInstallCheck()
+            installCheckAttempts = 0
+            $scope.resetUi()
+            setInstallState('missing')
+          } else {
+            scheduleInstallCheck(INSTALL_CHECK_RETRY_DELAY)
+          }
+        })
+      })
 
       $scope.$on('bell407SurveyPreview', function (event, data) {
         $scope.$evalAsync(function () {
@@ -729,7 +782,19 @@ angular.module('beamng.apps')
         })
       })
 
-      requestInstallCheck()
+      $scope.$on('VehicleChange', function () {
+        $scope.$evalAsync(function () {
+          scheduleInstallCheck(VEHICLE_EVENT_INSTALL_CHECK_DELAY)
+        })
+      })
+
+      $scope.$on('VehicleReset', function () {
+        $scope.$evalAsync(function () {
+          scheduleInstallCheck(VEHICLE_EVENT_INSTALL_CHECK_DELAY)
+        })
+      })
+
+      scheduleInstallCheck(0)
       updateFromBridgeSnapshot()
 
       $timeout(function () {
@@ -770,6 +835,10 @@ angular.module('beamng.apps')
         if (drawPending) {
           window.cancelAnimationFrame(drawPending)
           drawPending = null
+        }
+        if (pendingInstallCheck) {
+          $timeout.cancel(pendingInstallCheck)
+          pendingInstallCheck = null
         }
       })
     }]

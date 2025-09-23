@@ -39,6 +39,20 @@ local function ensureController()
         return autopController
 end
 
+local function isInstalled()
+        return ensureController() ~= nil
+end
+
+local function notifyInstallState(installed)
+        if guihooks and guihooks.trigger then
+                local value = installed
+                if value == nil then
+                        value = isInstalled()
+                end
+                guihooks.trigger("bell407SurveyInstallState", {installed = value and true or false, module = moduleName})
+        end
+end
+
 local function sendPreview(payload)
         if guihooks and guihooks.trigger then
                 guihooks.trigger("bell407SurveyPreview", payload)
@@ -86,6 +100,7 @@ end
 local function ensureReady()
         local ctrl = ensureController()
         if not ctrl then
+                notifyInstallState(false)
                 return nil, "missingPart"
         end
         if not ensureGroundMarker() then
@@ -359,14 +374,11 @@ local function cancel(reason)
         return true
 end
 
-local function isInstalled()
-        return ensureController() ~= nil
-end
-
 local function onInit()
         autopController = nil
         computeHome()
         requestGroundMarker()
+        notifyInstallState()
 end
 
 local function onReset()
@@ -378,6 +390,7 @@ local function onExtensionUnloaded()
         autopController = nil
         cachedPlan = nil
         lastPreview = nil
+        notifyInstallState(false)
 end
 
 M.onInit = onInit
