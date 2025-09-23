@@ -1,0 +1,756 @@
+{
+"bell_body": {
+	"information":{
+		"authors":"DrowsySam & Dummiesman, stefan750",
+		"name":"Body",
+	}
+    "slotType" : "bell_body",
+	"slots": [
+		["type", "default", "description"]
+		["bell_mainrotor","bell_mainrotor_realistic","Main Rotor"],
+		["bell_tailrotor","bell_tailrotor","Tail Rotor"],
+		["bell_engine","bell_engine","Engine"],
+		["bell_skid","bell_skid","Landing Skid"],
+		["bell_interior","bell_interior","Interior"],
+        ["bell_doors","bell_doors","Doors"],
+        ["bell_spotlight","","Spotlight"],
+		["bell_towhook","","Tow Hook"],
+		["bell_weaponmount_l","","Left Weapon Mount"],
+		["bell_weaponmount_r","","Right Weapon Mount"],
+	],
+	"selfCollisionThickness":2.02,
+	"remoteCollisionThickness":2.06,
+	"scalebeamSpring":0.84,
+	"scalebeamDamp":1.3,
+	"scalebeamDeform":1.5,
+	"scalebeamStrength":1.78,
+	"refNodes":[
+		["ref:", "back:", "left:", "up:"]
+		["b8", "b10", "b8l", "b7"]
+	],
+	"props": [
+		["func"           , "mesh"                , "idRef:", "idX:", "idY:", "baseRotation"          , "rotation"            , "translation"        , "min", "max", "offset", "multiplier"]
+		{
+			"lightInnerAngle":0
+			"lightOuterAngle":120
+			"lightAttenuation":{"x":0, "y":1, "z":1}
+			"lightCastShadows":false
+            "flareName":"vehicleHeadLightFlare"
+            "cookieName":"art/special/BNG_light_cookie_headlight.png"
+            "texSize":512
+            "shadowSoftness":0.5
+			"lightColor":{"r":255, "g":0, "b":0, "a":255}	
+			"lightBrightness":2
+			"lightRange":0		
+			//"animationType":"SubtlePulseLightAnim"
+			//"animationPeriod":3
+			"flareScale":0.05
+		}
+		["redflash"    , 	"SPOTLIGHT"    ,  "b16", "b16r", "b15l", {"x":0, "y":-90, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":-3.4, "y":0.627, "z":-0.145}}],	
+        ["highbeam"    , 	"SPOTLIGHT"    ,  "b16", "b16r", "b15l", {"x":0, "y":-90, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":-3.4, "y":0.627, "z":-0.145}}],	
+        {
+			"lightColor":{"r":0, "g":255, "b":0, "a":255}	
+        }
+        ["greenflash"    , 	"SPOTLIGHT"    ,  "b16", "b16r", "b15l", {"x":0, "y":90, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":4.68, "y":0.627, "z":-0.145}}],	
+        ["highbeam"    , 	"SPOTLIGHT"    ,  "b16", "b16r", "b15l", {"x":0, "y":90, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":4.68, "y":0.627, "z":-0.145}}],	
+        {
+			"lightColor":{"r":255, "g":255, "b":255, "a":255}	
+            "flareScale":0.2
+        }
+        ["flash"    , 	"SPOTLIGHT"    ,  "b19l", "b19r", "b19", {"x":0, "y":180, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":0.34, "y":1.01, "z":-0.05}}],	
+        {
+			"lightBrightness":1
+			"lightRange":30
+			"flareScale":0.2
+			"lightCastShadows":true
+        }
+        //LANDING LIGHT
+        ["highbeam"    , 	"SPOTLIGHT"    ,  "b2l", "b2r", "b3l", {"x":-120, "y":0, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":0.5, "y":-0.4, "z":0.2}}],	
+        {
+			"flareScale":0
+			"lightRange":2
+			"lightInnerAngle":0
+			"lightOuterAngle":110
+			"lightCastShadows":false
+        }
+        ["lowhighbeam"    , 	"SPOTLIGHT"    ,  "b6", "b6l", "b4", {"x":90, "y":0, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":0.071, "y":0.4, "z":0.62}}],	
+	 ],
+	 "cameraChase":{
+        "distance":12.5,
+        "distanceMin":4,
+        "defaultRotation":{"x":0,"y":-12,"z":0},
+        "offset":{"x":0, "y":0.3, "z":0.75},
+        "fov":65,
+    },
+	"cameraExternal":{
+		"distance":12.5,
+		"distanceMin":4,
+		"offset":{"x":0, "y":0.3, "z":0.75},
+		"fov":65,
+	},
+	"camerasInternal":[
+		["x", "y", "z", "fov", "id1:", "id2:", "id3:", "id4:", "id5:", "id6:"],
+		{"nodeWeight":0.5},
+		{"beamSpring":1500, "beamDamp":110},
+		{"selfCollision":true},
+		{"collision":true},
+		//dash cams
+		[-0.4, -1.15 1.65, 70, "b4","b4r","b4l","b3","b3l","b3r"],
+		[0.0, -2.15 1.65, 20, "b4","b4r","b4l","b3","b3l","b3r"],
+        //useless seat cams
+		//[0.4, 0.3 1.65, 70, "b7","b7r","b7l","b9","b9l","b9r"],
+		//[0, 0.3 1.65, 70, "b7","b7r","b7l","b9","b9l","b9r"],
+		//[-0.4, 0.3 1.65, 70, "b7","b7r","b7l","b9","b9l","b9r"],
+		//[-0.4, -0.6 1.65, 70, "b7","b7r","b7l","b5","b5l","b5r"],
+		//[0.4, -0.6 1.65, 70, "b7","b7r","b7l","b5","b5l","b5r"],
+		//Rotor blade camera
+		{"nodeWeight":0.1},
+		{"beamSpring":700, "beamDamp":50},
+		//[0.0, 5.5, 3.15, 70, "em","e1","e2b","e2r","e2l","e2f", {"idRef":80,"idBack":82,"idUp":90}],
+	],
+	"flexbodies": [
+		 ["mesh", "[group]:", "nonFlexMaterials"],
+         ["bell407_fuselage_ptt",["bell_body"]],
+		 ["bell407_fuselage", ["bell_body"]],
+	],
+	"nodes": [
+		 ["id", "posX", "posY", "posZ"],
+		 {"selfcollision":true}
+		 {"collision":true}
+		 {"frictionCoef":0.7},
+		 {"nodeMaterial":"|NM_METAL"},
+		 {"nodeWeight":48},
+		 {"group":"bell_body"},
+		 //new front bit
+		 ["gf1", 0.0, -3.0, 1.15],
+		 ["gf2", 0.0, -3.0, 0.91],
+
+		 {"nodeWeight":29.5},
+		 ["b1l", 0.6, -2.5, 1.25],
+		 ["b1", 0.0, -2.5, 1.40],
+		 ["b1r", -0.6, -2.5, 1.25],
+		 
+		 ["b2l", 0.6, -2.5, 0.9],
+		 ["b2", 0.0, -2.5, 0.7],
+		 ["b2r", -0.6, -2.5, 0.9],
+		 //
+		 ["b3l", 0.65, -2.0, 1.52],
+		 ["b3", 0.0, -2.0, 1.8],
+		 ["b3r", -0.65, -2.0, 1.52],
+		 
+		 ["b4l", 0.7, -2.0, 0.7],
+		 ["b4", 0.0, -2.0, 0.65],
+		 ["b4r", -0.7, -2.0, 0.7],
+		 //
+		 ["b5l", 0.7, -1.1, 1.9],
+		 ["b5", 0.0, -1.1, 2.3],
+		 ["b5r", -0.7, -1.1, 1.9],
+		 
+		 ["b6l", 0.7, -1.1, 0.65],
+		 ["b6", 0.0, -1.1, 0.6],
+		 ["b6r", -0.7, -1.1, 0.65],
+		 //
+		 ["b7l", 0.7, 0.0, 1.9],
+		{"breakGroup":"rotor_F"},  
+		 ["b7", 0.0, 0.0, 2.63],
+		{"breakGroup":""},  
+		 ["b7r", -0.7, 0.0, 1.9],
+		 
+		 ["b8l", 0.7, 0.0 0.55],
+		 ["b8", 0.0, 0.0, 0.55 , {"couplerTag":"tow_hitch","couplerStrength":800000,"couplerRadius":1}],
+		 ["b8r", -0.7, 0.0, 0.55],
+		 //
+		 ["b9l", 0.7, 1.0, 1.9],
+		 ["b9", 0.0, 1.0, 2.65],
+		 ["b9r", -0.7, 1.0, 1.9],
+		 
+		 ["b10l", 0.7, 1.0, 0.55],
+		 ["b10", 0.0, 1.0, 0.53],
+		 ["b10r", -0.7, 1.0, 0.55],
+		 //
+		 {"nodeWeight":7.5},
+		 ["b11l", 0.4, 2.1, 1.85],
+		 ["b11", 0.0, 2.1, 2.53],
+		 ["b11r", -0.4, 2.1, 1.85],
+		 
+		 ["b12l", 0.4, 2.1, 0.85],
+		 ["b12", 0.0, 2.1, 0.8],
+		 ["b12r", -0.4, 2.1, 0.85],
+		 //
+		 ["b13l", 0.3, 2.95, 2.0],
+		 ["b13", 0.0, 2.95, 2.19],
+		 ["b13r", -0.3, 2.95, 2.0],
+		 
+		 ["b14l", 0.3, 2.95, 1.6],
+		 ["b14", 0.0, 2.95, 1.6],
+		 ["b14r", -0.3, 2.95, 1.6],
+		 //
+		 ["b15l", 0.3, 4.55, 2.1],
+		 ["b15", 0.0, 4.55, 2.3],
+		 ["b15r", -0.3, 4.55, 2.1],
+		 
+		 ["b16l", 0.3, 4.55, 1.7],
+		 ["b16", 0.0, 4.55, 1.7],
+		 ["b16r", -0.3, 4.55, 1.7],
+		 //
+		 ["b17l", 0.3, 6.00, 2.2],
+		 ["b17", 0.0, 6.00, 2.4],
+		 ["b17r", -0.3, 6.00, 2.2],
+		 
+		 ["b18l", 0.3, 6.00, 1.8],
+		 ["b18", 0.0, 6.00, 1.8],
+		 ["b18r", -0.3, 6.00, 1.8],
+		 //
+		 ["b19l", 0.25, 7.40, 2.5],
+		 ["b19", 0.0, 7.40, 3.3],
+		 ["b19r", -0.25, 7.40, 2.5],
+		 
+		 ["b20l", 0.25, 7.40, 1.9],
+		 ["b20", 0.0, 7.40, 1.3],
+		 ["b20r", -0.25, 7.40, 1.9],
+	],
+	"beams": [
+		  ["id1:", "id2:"],
+		  {"beamSpring":10501000,"beamDamp":100},
+		  {"beamDeform":7000,"beamStrength":51160000},
+		  //extra tail supports
+		  ["b12r","b16r"],
+		  ["b12","b16"],
+		  ["b12l","b16l"],
+		  
+		  ["b12r","b18r"],
+		  ["b12","b18"],
+		  ["b12l","b18l"],
+	  
+		  ["b12r","b20r"],
+		  ["b12","b20"],
+		  ["b12l","b20l"],
+		  
+		  ["b9l","b19"],
+		  ["b9r","b19"],  
+		  ["b10l","b19"],
+		  ["b10r","b19"],  
+		  
+		  ["b9l","b20"],
+		  ["b9r","b20"],  
+		  ["b10l","b20"],
+		  ["b10r","b20"],  
+		  //section 1 left
+		  ["gf1","gf2"],
+		  ["gf1","b1"],
+		  ["gf2","b1"],
+		  
+		  ["gf1","b1l"],
+		  ["gf2","b1l"],
+		  
+		  ["gf1","b2"],
+		  ["gf2","b2"],
+		  
+		  ["gf1","b2l"],
+		  ["gf2","b2l"],
+		  //right
+		  ["gf1","b1r"],
+		  ["gf2","b1r"],
+		  
+		  ["gf1","b2r"],
+		  ["gf2","b2r"],
+		  
+		  //section two left
+		  ["b1","b1l"],
+		  ["b1","b2"],
+		  ["b1l","b2l"],
+		  ["b2","b2l"], 
+		  ["b2","b1l"],
+		  ["b1","b2l"],
+		  //right
+		  ["b1","b1r"],
+		  ["b1r","b2r"],
+		  ["b2","b2r"], 
+		  ["b2","b1r"],
+		  ["b1","b2r"],
+		  
+		  //section three left
+		  ["b3","b3l"],
+		  ["b4","b4l"],
+		  
+		  ["b3","b1"],
+		  ["b3l","b1l"],
+		  ["b3l","b1"],
+		  ["b3","b1l"],
+		  ["b2","b4"],
+		  ["b2l","b4l"],
+		  ["b2l","b4"],
+		  ["b2","b4l"],
+		  
+		  ["b3","b4"],
+		  ["b3l","b4l"],
+		  ["b3l","b4"],
+		  ["b3","b4l"],
+		  
+		  ["b1","b4"],
+		  ["b3","b2"],
+		  ["b1l","b4l"],
+		  ["b3l","b2l"],
+		  //right
+		  ["b3","b3r"],
+		  ["b4","b4r"],
+		  
+		  ["b3r","b1r"],
+		  ["b3r","b1"],
+		  ["b3","b1r"],
+		  ["b2r","b4r"],
+		  ["b2r","b4"],
+		  ["b2","b4r"],
+		  
+		  ["b3r","b4r"],
+		  ["b3r","b4"],
+		  ["b3","b4r"],
+		  
+		  ["b1r","b4r"],
+		  ["b3r","b2r"],
+		  
+		  //section four left
+		  ["b6","b6l"],
+		  ["b5","b5l"],
+
+		  ["b5","b6"],
+		  ["b5l","b6l"],
+		  ["b5l","b6"],
+		  ["b5","b6l"],
+		  
+		  
+		  ["b3","b5"],
+		  ["b3l","b5l"],
+		  ["b3l","b5"],
+		  ["b3","b5l"],
+		  ["b6","b4"],
+		  ["b6l","b4l"],
+		  ["b6l","b4"],
+		  ["b6","b4l"],
+		  ["b5","b4"],
+		  ["b3","b6"],
+		  ["b5l","b4l"],
+		  ["b3l","b6l"],
+		  //right
+		  ["b6","b6r"],
+		  ["b5","b5r"],
+
+		  ["b5r","b6r"],
+		  ["b5r","b6"],
+		  ["b5","b6r"],
+		  
+		  
+		  ["b3r","b5r"],
+		  ["b3r","b5"],
+		  ["b3","b5r"],
+		  ["b6r","b4r"],
+		  ["b6r","b4"],
+		  ["b6","b4r"],
+		  ["b5r","b4r"],
+		  ["b3r","b6r"],
+		  
+		  //section five left
+		  ["b8","b8l"],
+		  ["b7","b7l"],
+
+		  ["b7","b8"],
+		  ["b7l","b8l"],
+		  ["b7l","b8"],
+		  ["b7","b8l"],
+		  
+		  
+		  ["b7","b5"],
+		  ["b7l","b5l"],
+		  ["b7l","b5"],
+		  ["b7","b5l"],
+		  ["b6","b8"],
+		  ["b6l","b8l"],
+		  ["b6l","b8"],
+		  ["b6","b8l"],
+		  ["b5","b8"],
+		  ["b7","b6"],
+		  ["b5l","b8l"],
+		  ["b7l","b6l"],
+		  //right
+		  ["b8","b8r"],
+		  ["b7","b7r"],
+
+		  ["b7r","b8r"],
+		  ["b7r","b8"],
+		  ["b7","b8r"],
+		  
+		  
+		  ["b7r","b5r"],
+		  ["b7r","b5"],
+		  ["b7","b5r"],
+		  ["b6r","b8r"],
+		  ["b6r","b8"],
+		  ["b6","b8r"],
+		  ["b5r","b8r"],
+		  ["b7r","b6r"],
+		
+		  //section five left
+		  ["b9","b9l"],
+		  ["b10","b10l"],
+
+		  ["b10","b9"],
+		  ["b10l","b9l"],
+		  ["b10l","b9"],
+		  ["b10","b9l"],
+		  
+		  
+		  ["b7","b9"],
+		  ["b7l","b9l"],
+		  ["b7l","b9"],
+		  ["b7","b9l"],
+		  ["b10","b8"],
+		  ["b10l","b8l"],
+		  ["b10l","b8"],
+		  ["b10","b8l"],
+		  ["b9","b8"],
+		  ["b7","b10"],
+		  ["b9l","b8l"],
+		  ["b7l","b10l"],
+		  //right
+		  ["b9","b9r"],
+		  ["b10","b10r"],
+
+		  ["b10r","b9r"],
+		  ["b10r","b9"],
+		  ["b10","b9r"],
+		  
+
+		  ["b7r","b9r"],
+		  ["b7r","b9"],
+		  ["b7","b9r"],
+		  ["b10r","b8r"],
+		  ["b10r","b8"],
+		  ["b10","b8r"],
+		  ["b9r","b8r"],
+		  ["b7r","b10r"],
+		  
+		  //section six left
+		  ["b11","b11l"],
+		  ["b12","b12l"],
+
+		  ["b12","b11"],
+		  ["b12l","b11l"],
+		  ["b12l","b11"],
+		  ["b12","b11l"],
+		  
+
+		  ["b11","b9"],
+		  ["b11l","b9l"],
+		  ["b11l","b9"],
+		  ["b11","b9l"],
+		  ["b10","b12"],
+		  ["b10l","b12l"],
+		  ["b10l","b12"],
+		  ["b10","b12l"],
+		  ["b9","b12"],
+		  ["b11","b10"],
+		  ["b9l","b12l"],
+		  ["b11l","b10l"],
+		  //right
+		  ["b11","b11r"],
+		  ["b12","b12r"],
+
+		  ["b12r","b11r"],
+		  ["b12r","b11"],
+		  ["b12","b11r"],
+		  
+
+		  ["b11r","b9r"],
+		  ["b11r","b9"],
+		  ["b11","b9r"],
+		  ["b10r","b12r"],
+		  ["b10r","b12"],
+		  ["b10","b12r"],
+		  ["b9r","b12r"],
+		  ["b11r","b10r"],
+		  
+		  //section seven left
+		  ["b13","b13l"],
+		  ["b14","b14l"],
+
+		  ["b14","b13"],
+		  ["b14l","b13l"],
+		  ["b14l","b13"],
+		  ["b14","b13l"],
+		  
+		  
+		  ["b11","b13"],
+		  ["b11l","b13l"],
+		  ["b11l","b13"],
+		  ["b11","b13l"],
+		  ["b14","b12"],
+		  ["b14l","b12l"],
+		  ["b14l","b12"],
+		  ["b14","b12l"],
+		  ["b13","b12"],
+		  ["b11","b14"],
+		  ["b13l","b12l"],
+		  ["b11l","b14l"],
+		  //right
+		  ["b13","b13r"],
+		  ["b14","b14r"],
+
+		  ["b14r","b13r"],
+		  ["b14r","b13"],
+		  ["b14","b13r"],
+		  
+		  
+		  ["b11r","b13r"],
+		  ["b11r","b13"],
+		  ["b11","b13r"],
+		  ["b14r","b12r"],
+		  ["b14r","b12"],
+		  ["b14","b12r"],
+		  ["b13r","b12r"],
+		  ["b11r","b14r"],
+		  
+		  //section eight left
+		  ["b15","b15l"],
+		  ["b16","b16l"],
+
+		  ["b16","b15"],
+		  ["b16l","b15l"],
+		  ["b16l","b15"],
+		  ["b16","b15l"],
+		  
+		  
+		  ["b15","b13"],
+		  ["b15l","b13l"],
+		  ["b15l","b13"],
+		  ["b15","b13l"],
+		  ["b14","b16"],
+		  ["b14l","b16l"],
+		  ["b14l","b16"],
+		  ["b14","b16l"],
+		  ["b13","b16"],
+		  ["b15","b14"],
+		  ["b13l","b16l"],
+		  ["b15l","b14l"],
+		  //right
+		  ["b15","b15r"],
+		  ["b16","b16r"],
+
+		  ["b16r","b15r"],
+		  ["b16r","b15"],
+		  ["b16","b15r"],
+		  
+		  
+		  ["b15r","b13r"],
+		  ["b15r","b13"],
+		  ["b15","b13r"],
+		  ["b14r","b16r"],
+		  ["b14r","b16"],
+		  ["b14","b16r"],
+		  ["b13r","b16r"],
+		  ["b15r","b14r"],
+		  
+		  //section nine left
+		  ["b17","b17l"],
+		  ["b18","b18l"],
+
+		  ["b18","b17"],
+		  ["b18l","b17l"],
+		  ["b18l","b17"],
+		  ["b18","b17l"],
+		  
+		  
+		  ["b15","b17"],
+		  ["b15l","b17l"],
+		  ["b15l","b17"],
+		  ["b15","b17l"],
+		  ["b18","b16"],
+		  ["b18l","b16l"],
+		  ["b18l","b16"],
+		  ["b18","b16l"],
+		  ["b17","b16"],
+		  ["b15","b18"],
+		  ["b17l","b16l"],
+		  ["b15l","b18l"],
+		  //right
+		  ["b17","b17r"],
+		  ["b18","b18r"],
+
+		  ["b18r","b17r"],
+		  ["b18r","b17"],
+		  ["b18","b17r"],
+		  
+		  
+		  ["b15r","b17r"],
+		  ["b15r","b17"],
+		  ["b15","b17r"],
+		  ["b18r","b16r"],
+		  ["b18r","b16"],
+		  ["b18","b16r"],
+		  ["b17r","b16r"],
+		  ["b15r","b18r"],
+		  
+		  //section ten left
+		  ["b19","b19l"],
+		  ["b20","b20l"],
+
+		  ["b20","b19"],
+		  ["b20l","b19l"],
+		  ["b20l","b19"],
+		  ["b20","b19l"],
+		  
+		  
+		  ["b19","b17"],
+		  ["b19l","b17l"],
+		  ["b19l","b17"],
+		  ["b19","b17l"],
+		  ["b18","b20"],
+		  ["b18l","b20l"],
+		  ["b18l","b20"],
+		  ["b18","b20l"],
+		  ["b17","b20"],
+		  ["b19","b18"],
+		  ["b17l","b20l"],
+		  ["b19l","b18l"],
+		  //right
+		  ["b19","b19r"],
+		  ["b20","b20r"],
+
+		  ["b20r","b19r"],
+		  ["b20r","b19"],
+		  ["b20","b19r"],
+		  
+		  
+		  ["b19r","b17r"],
+		  ["b19r","b17"],
+		  ["b19","b17r"],
+		  ["b18r","b20r"],
+		  ["b18r","b20"],
+		  ["b18","b20r"],
+		  ["b17r","b20r"],
+		  ["b19r","b18r"],
+
+
+	],
+	"torsionbars": [
+        ["id1:", "id2:", "id3:", "id4:"],
+        {"spring":10000000, "damp":100, "deform":30000, "strength":100000},
+        //stop tail from twisting too easily
+        ["b19", "b20", "b12", "b11"],
+    ],
+	"quads": [
+		["id1:","id2:","id3:","id4:"],
+		{"dragCoef":10},
+		//left
+		["b12l","b14l","b13l","b11l"],
+		["b10l","b12l","b11l","b9l"],
+		["b8l","b10l","b9l","b7l"],
+		["b6l","b8l","b7l","b5l"],
+		["b4l","b6l","b5l","b3l"],
+		["b2l","b4l","b3l","b1l"],
+		
+		//front left
+		["gf2","b2l","b1l","gf1"],
+		["b1","b1l","b3l","b3"],
+		["b5","b3","b3l","b5l"],
+		["b5l","b7l","b7","b5"],
+		["b7l","b9l","b9","b7"],
+		["b9l","b11l","b11","b9"],
+		["b11l","b13l","b13","b11"],
+		
+		//left bottom
+		["b12l","b12","b14","b14l"],
+		["b10","b12","b12l","b10l"],
+		["b8","b10","b10l","b8l"],
+		["b6","b8","b8l","b6l"],
+		["b4","b6","b6l","b4l"],
+		["b2","b4","b4l","b2l"],
+		
+		//tail left
+		["b14l","b16l","b15l","b13l"],
+		["b16l","b18l","b17l","b15l"],
+		["b18l","b20l","b19l","b17l"],
+		//tail left top
+		["b13l","b15l","b15","b13"],
+		["b15l","b17l","b17","b15"],
+		//tail left bottom
+		["b16l","b15l","b15","b16"],
+		["b16","b18","b18l","b16l"],
+		["b14","b16","b16l","b14l"],
+		
+		//right
+		["b11r","b13r","b14r","b12r"],
+		["b9r","b11r","b12r","b10r"],
+		["b7r","b9r","b10r","b8r"],
+		["b5r","b7r","b8r","b6r"],
+		["b3r","b5r","b6r","b4r"],
+		["b1r","b3r","b4r","b2r"],
+		
+		//front right
+		["gf1","b1r","b2r","gf2"],
+		["b3","b3r","b1r","b1"],
+		["b5r","b3r","b3","b5"],
+		["b5","b7","b7r","b5r"],
+		["b7","b9","b9r","b7r"],
+		["b9","b11","b11r","b9r"],
+		["b11","b13","b13r","b11r"],
+		
+		//right bottom
+		["b14r","b14","b12","b12r"],
+		["b10r","b12r","b12","b10"],
+		["b8r","b10r","b10","b8"],
+		["b6r","b8r","b8","b6"],
+		["b4r","b6r","b6","b4"],
+		["b2r","b4r","b4","b2"],
+		
+		//tail right
+		["b13r","b15r","b16r","b14r"],
+		["b15r","b17r","b18r","b16r"],
+		["b17r","b19r","b20r","b18r"],
+		//tail right top
+		["b13","b15","b15r","b13r"],
+		["b15","b17","b17r","b15r"],
+		//tail right bottom
+		["b16","b15","b15r","b16r"],
+		["b16r","b18r","b18","b16"],
+		["b14r","b16r","b16","b14"],
+
+		//tail rear middle
+		["b20l","b20r","b19r","b19l"],
+	],
+	"triangles": [
+		["id1:","id2:","id3:"],
+		{"dragCoef":10},
+		//left
+		["gf1","b1l","b1"],
+		["gf2","b2","b2l"],
+		//right
+		["b1r","gf1","b1"],
+		["b2","gf2","b2r"],
+		
+		//tail fin left
+		["b17l","b19l","b19"],
+		["b20l","b18l","b20"],
+		//tail fin right
+		["b19r","b17r","b19"],
+		["b18r","b20r","b20"],
+
+		//tail fin front bottom
+		["b18l","b18","b20"],
+		["b18","b18r","b20"],
+
+		//tail fin front top
+		["b17r","b17","b19"],
+		["b17","b17l","b19"],
+
+		//tail fin rear
+		["b20l","b20","b20r"],
+		["b19l","b19r","b19"],
+
+		//vertical stabilizer
+		{"stallAngle":0.58},
+		{"dragCoef":70},
+		{"liftCoef":70},
+		["b18","b19","b20"],
+	],
+}
+}

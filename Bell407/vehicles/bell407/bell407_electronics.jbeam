@@ -1,0 +1,67 @@
+{
+"bell_electronics": {
+	"information":{
+		"authors":"stefan750",
+		"name":"Electronics",
+	}
+    "slotType" : "bell_electronics",
+	"slots": [
+		["type", "default", "description"]
+		["bell_assists","bell_assists","Pilot Assists"],
+	],
+    "controller": [
+		["fileName"],
+		["407electrics", {}],
+		["407controls", {}],
+	],
+},
+"bell_assists": {
+	"information":{
+		"authors":"stefan750",
+		"name":"Pilot Assists",
+	}
+    "slotType" : "bell_assists",
+	"controller": [
+		["fileName"],
+		["407assists"],
+		["driveModes"]
+	],
+	"driveModes": {
+		"enabledModes":["autocenter", "stabilize", "off"]
+		"defaultMode": "off"
+		"defaultSettings": [
+			["type"]
+			//["controller", {"controllerName":"407assists", "mode":"stabilize"}]
+		],
+		"modes": {
+			"autocenter": {
+				"name": "Auto Level",
+				"order": 30,
+				"settings": [
+					["type"]
+					["simpleControlButton", {"buttonId":"dse", "uiName":"Pilot Assists","icon":"powertrain_esc","color":"0CDA0C", "offColor":"343434", "offColorElectric":"dseWarningPulse"}]
+					["controller", {"controllerName":"407assists", "mode":"autocenter"}]
+				],
+			},
+			"stabilize": {
+				"name": "Stabilize",
+				"order": 20,
+				"settings": [
+					["type"]
+					["simpleControlButton", {"buttonId":"dse", "uiName":"Pilot Assists","icon":"powertrain_esc","color":"238BE6", "offColor":"343434", "offColorElectric":"dseWarningPulse"}]
+					["controller", {"controllerName":"407assists", "mode":"stabilize"}]
+				],
+			},
+			"off": {
+				"name": "Off",
+				"order": 10,
+				"settings": [
+					["type"]
+					["simpleControlButton", {"buttonId":"dse", "uiName":"Pilot Assists","icon":"powertrain_esc","color":"999999", "offColor":"343434", "offColorElectric":"dseWarningPulse"}]
+					["controller", {"controllerName":"407assists", "mode":"off"}]
+				],
+			},
+		},
+	},
+}
+}

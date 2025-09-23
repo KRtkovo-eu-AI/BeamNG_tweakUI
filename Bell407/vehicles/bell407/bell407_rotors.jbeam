@@ -1,0 +1,370 @@
+{
+"bell_mainrotor_realistic": {
+	"information":{
+		"authors":"DrowsySam, stefan750",
+		"name":"Realistic Main Rotor",
+	}
+    "slotType" : "bell_mainrotor",
+	"flexbodies": 
+	[
+		["mesh", "[group]:"],
+		["bell407_mainrotor", ["FP","FP_msh"]],
+        ["bell407_mainrotor_blur", ["FP","FP_msh"]],
+	],
+	"props": [
+		["func"      , "mesh"              , "idRef:", "idX:", "idY:"            , "baseRotation"        , "rotation"                 , "translation"        , "min", "max", "offset", "multiplier"]
+		//["driveshaft"  , "bell_rotorshaft_F", "ra7","b8","e2l",  {"x":0, "y":0, "z":0}, {"x":0, "y":1, "z":0}    , {"x":0, "y":0, "z":0}, -360, 360, 0, 1],
+	],
+    "powertrain" : [
+        ["type", "name", "inputName", "inputIndex"],
+        ["shaft", "MainProp", "differential_R", 1, {"gearRatio": 5.0, "connectedWheel":"FP", "breakTriggerBeam":"axle_F", "uiName":"Main Prop", "friction":100}],
+    ],
+    "glowMap":{
+		"bell407_rotor_blur":{"simpleFunction":{"rotorrpm":0.00000033}, "off":"invis", "on":"bell407_rotor_blur"},
+		"bell407_blades":{"simpleFunction":{"rotorrpm":0.00000033}, "off":"bell407_blades", "on":"invis"},
+    },
+	"rotators":
+	[
+		["name","[group]:","node1:","node2:","nodeS","nodeArm:","wheelDir"],
+		
+		{"radius":5.25},
+		{"speedo":false}
+		{"brakeTorque":5000},
+		{"parkingTorque":5000},
+		{"brakeSpring":1000},
+		{"axleBeams":["axle_F"]},
+        ["FP", ["FP"], "e1", "em", 9999, "b9", 1, {"torqueCoupling:":"b7", "torqueArm:":"b8", "torqueArm2:":"b10"}],
+	],
+	"nodes": 
+	[
+		["id", "posX", "posY", "posZ"],
+		{"selfCollision":false}
+		{"collision": true}
+		{"frictionCoef":0.7},
+		{"nodeMaterial":"|NM_METAL"},
+		{"nodeWeight":6},
+		{"group":"FP_msh"},
+        ["em", 0.0, 0.0, 3.27,{"chemEnergy":2000,"burnRate":0.39,"flashPoint":800,"specHeat": 0.1,"selfIgnitionCoef":false,"smokePoint":650,"baseTemp":"thermals","conductionRadius":0.07}],
+        {"group":"NOTHING"},
+		{"collision": false}
+		//{"nodeWeight":10},
+		["e1", 0.0, 0.0, 1.5,{"chemEnergy":2000,"burnRate":0.39,"flashPoint":800,"specHeat": 0.1,"selfIgnitionCoef":false,"smokePoint":650,"baseTemp":"thermals","conductionRadius":0.07}],
+		["e2", 0.0, 0.0, 1.5,{"chemEnergy":2000,"burnRate":0.39,"flashPoint":800,"specHeat": 0.1,"selfIgnitionCoef":false,"smokePoint":650,"baseTemp":"thermals","conductionRadius":0.07}],
+		
+		{"collision":true}
+		{"group":"FP"},
+		["e2l",  5.25, 0.0, 3.15],
+		["e2r",  -5.25, 0.0, 3.15],
+		["e2b",  0.0, 5.25, 3.15],
+		["e2f",  0.0, -5.25, 3.15],
+		
+		["e3l",  5.25, -0.5, 3.15],
+		["e3r",  -5.25, 0.5, 3.15],
+		["e3b",  0.5, 5.25, 3.15],
+		["e3f",  -0.5, -5.25, 3.15],
+
+		{"group":"NOTHING"},
+		["e4l",  -0.1, -0.5, 3.27],
+		["e4r",  0.1, 0.5, 3.27],
+		["e4b",  0.5, -0.1, 3.27],
+		["e4f",  -0.5, 0.1, 3.27],
+
+		{"group":""},
+	],
+	
+	"beams": 
+	[
+		["id1:", "id2:"],
+		{"beamPrecompression":1, "beamType":"|NORMAL", "beamLongBound":1.0, "beamShortBound":1.0},
+		{"disableMeshBreaking":false},
+
+		//main rotor
+		{"beamSpring":4170000,"beamDamp":800},
+		{"beamDeform":800000,"beamStrength":100000},
+		{"name":"axle_F"}
+		{"breakGroup":""},
+		
+		["e1","em"],
+
+		//blade l
+		{"breakGroup":"rotor_FL"},
+		["em","e2l"],
+		["e3l","e2l"],
+		["e3l","em"],
+		["e4l","em"],
+		["e4l","e2l"],
+		["e4l","e3l"],
+		
+		//blade r
+		{"breakGroup":"rotor_FR"},
+		["em","e2r"],
+		["e3r","e2r"],
+		["e3r","em"],
+		["e4r","em"],
+		["e4r","e2r"],
+		["e4r","e3r"],
+		
+		//blade f
+		{"breakGroup":"rotor_FF"},
+		["em","e2f"],
+		["e3f","e2f"],
+		["e3f","em"],
+		["e4f","em"],
+		["e4f","e2f"],
+		["e4f","e3f"],
+		
+		//blade b
+		{"breakGroup":"rotor_FB"},
+		["em","e2b"],
+		["e3b","e2b"],
+		["e3b","em"],
+		["e4b","em"],
+		["e4b","e2b"],
+		["e4b","e3b"],
+		
+		{"breakGroup":""},
+
+		//rotor control links
+		{"beamPrecompression":0.985, "beamPrecompressionTime":0.5},
+		["e4l","e2", {"breakGroup":"rotor_FL"}],
+		["e4r","e2", {"breakGroup":"rotor_FR"}],
+		["e4f","e2", {"breakGroup":"rotor_FF"}],
+		["e4b","e2", {"breakGroup":"rotor_FB"}],
+		{"beamPrecompression":1},
+
+		//rotor flap links
+		{"beamSpring":10000,"beamDamp":30},
+		{"beamDeform":"FLT_MAX","beamStrength":3000},
+		{"beamType":"|LBEAM"},
+		{"id3:":"em"}
+		["e1","e2l", {"breakGroup":"rotor_FL"}],
+		["e1","e2r", {"breakGroup":"rotor_FR"}],
+		["e1","e2f", {"breakGroup":"rotor_FF"}],
+		["e1","e2b", {"breakGroup":"rotor_FB"}],
+
+		//rotor lead lag links
+		{"beamSpring":5000,"beamDamp":20},
+		{"beamDeform":500,"beamStrength":5000},
+		{"beamType":"|LBEAM"},
+		{"id3:":"em"}
+		["e2l","e2f"],
+		["e2r","e2f"],
+		["e2r","e2b"],
+		["e2l","e2b"],
+		{"beamType":"|NORMAL"},
+		
+		//rotor body connection
+		{"beamSpring":4170000,"beamDamp":800},
+		{"beamDeform":50000,"beamStrength":60000},
+		{"breakGroup":"rotor_F"},
+		{"breakGroupType":1},
+		["e1","b5"],
+		["e1","b9"],
+		["e1","b8", {"name":"EngineDamage"}],
+		["e1","b7"],
+		["e1","b7l"],
+		["e1","b7r"],
+
+		["em","b7", {"breakGroupType":0}],
+        ["em","b7l"],
+        ["em","b7r"],
+        ["em","b9"],
+        ["em","b9l"],
+        ["em","b9r"],
+        ["em","b5"],
+        ["em","b5l"],
+        ["em","b5r"],
+
+		{"breakGroup":""},
+		{"breakGroupType":0},
+        {"disableMeshBreaking":true},
+		{"beamPrecompression":1, "beamType":"|NORMAL", "beamLongBound":1.0, "beamShortBound":1.0},
+        {"name":""},
+	],
+    "hydros": [
+		["id1:","id2:"],
+		//{"beamSpring":6001000,"beamDamp":800,"beamDeform":21215000,"beamStrength":2545000},
+		//["e2","em",{"inputSource":"b407_lift","inLimit":1.05,"outLimit":0.95,"inRate":1,"outRate":1,"inputFactor":-1}],
+		
+		{"beamSpring":4001000,"beamDamp":800,"beamDeform":11215000,"beamStrength":1545000},
+		{"breakGroup":"rotor_F"},
+		["e2","b9",{"inputSource":"hydro_b","inputFactor":1}],
+		["e2","b5",{"inputSource":"hydro_f","inputFactor":1}],
+		
+		["e2","b7l",{"inputSource":"hydro_l","inputFactor":1}],
+		["e2","b7r",{"inputSource":"hydro_r","inputFactor":1}],
+		
+		{"breakGroup":""},
+	],
+	"torsionbars": [
+        ["id1:", "id2:", "id3:", "id4:"],
+        {"spring":1000000, "damp":100, "deform":300000, "strength":1000000},
+        ["e4l", "em", "e2l", "e3l"],
+		["e4r", "em", "e2r", "e3r"],
+		["e4f", "em", "e2f", "e3f"],
+		["e4b", "em", "e2b", "e3b"],
+    ],
+	"triangles": 
+	[
+		["id1:","id2:","id3:"],
+		{"groundModel":"metal"},
+		//main rotor
+		{"stallAngle":0.38},
+		{"dragCoef":50},
+		{"liftCoef":50},
+		["e3l","e2l","em"],
+		["e4l","e3l","em"],
+		["e3b","e2b","em"],
+		["e4b","e3b","em"],
+		["e3r","e2r","em"],
+		["e4r","e3r","em"],
+		["e3f","e2f","em"],
+		["e4f","e3f","em"],
+	],
+},
+"bell_tailrotor": {
+	"information":{
+		"authors":"DrowsySam, stefan750",
+		"name":"Tail Rotor",
+	}
+    "slotType" : "bell_tailrotor",
+	"flexbodies": 
+	[
+		["mesh", "[group]:"],
+		["bell407_rearrotor", ["RP"]],
+        ["bell407_rearrotor_blur", ["RP"]],
+	],
+	"powertrain" : [
+        ["type", "name", "inputName", "inputIndex"],
+        ["shaft", "RearProp", "differential_R", 2, {"gearRatio": 1.0, "connectedWheel":"RP", "breakTriggerBeam":"axle_R", "uiName":"Rear Prop", "friction":10}],
+    ],
+    "rotators":
+	[
+		["name","[group]:","node1:","node2:","nodeS","nodeArm:","wheelDir"],
+		
+		{"radius":0.9},
+		{"speedo":false}
+		{"brakeTorque":0},
+		{"parkingTorque":0},
+		{"brakeSpring":0},
+		{"axleBeams":["axle_R"]},
+		["RP", ["RP"], "rp1l", "rp1r", 9999, "b19", -1, {"torqueCoupling:":"b19l", "torqueArm:":"b19r", "torqueArm2:":"b20r"}],
+	],
+	"nodes": 
+	[
+		["id", "posX", "posY", "posZ"],
+		{"selfCollision":false}
+		{"collision": true}
+		{"frictionCoef":0.7},
+		{"nodeMaterial":"|NM_METAL"},
+		
+		{"collision": true}
+		{"nodeWeight":3},
+		["rp1l", 0.2, 6.88583, 2.21009,{"chemEnergy":2000,"burnRate":0.39,"flashPoint":800,"specHeat": 0.1,"selfIgnitionCoef":false,"smokePoint":650,"baseTemp":"thermals","conductionRadius":0.07}],
+		{"collision": false}
+		["rp1r", -0.5, 6.88583, 2.21009,{"chemEnergy":2000,"burnRate":0.39,"flashPoint":800,"specHeat": 0.1,"selfIgnitionCoef":false,"smokePoint":650,"baseTemp":"thermals","conductionRadius":0.07}],
+		
+		{"collision":true}
+		{"group":"RP"},
+		{"nodeWeight":1},
+		["rp2t", 0.2, 6.88583, 3.11009],
+		["rp2d", 0.2, 6.88583, 1.31009],
+        
+		{"collision":false}
+		["rp2f", 0.2, 6.48583, 2.21009],
+		["rp2b", 0.2, 7.28583, 2.21009],
+		{"collision":true}
+		
+		["rp3t", 0.2, 7.18583, 3.11009],
+		["rp3d", 0.2, 6.58583, 1.31009],
+
+		{"group":""},
+	],
+	
+	"beams": 
+	[
+		["id1:", "id2:"],
+		{"beamPrecompression":1, "beamType":"|NORMAL", "beamLongBound":1.0, "beamShortBound":1.0},
+		{"disableMeshBreaking":false},
+
+		//tail rotor
+		{"beamSpring":2170000,"beamDamp":100},
+		{"beamDeform":40000,"beamStrength":50000},
+		{"name":"axle_R"}
+	    //{"name":"EngineDamage"},
+		//{"breakGroup":"rotor_R"},  
+        
+		["rp1l","rp1r"],
+		
+		["rp1l","b17"],
+		["rp1l","b18"],
+		["rp1l","b19"],
+		["rp1l","b20"],
+		["rp1l","b17l"],
+		["rp1l","b18l"],
+		["rp1l","b19l"],
+		["rp1l","b20l"],
+		
+		["rp1r","b17"],
+		["rp1r","b18"],
+		["rp1r","b19"],
+		["rp1r","b20"],
+		["rp1r","b17r"],
+		["rp1r","b18r"],
+		["rp1r","b19r"],
+		["rp1r","b20r"],
+		
+		["rp2t","rp1l"],
+		["rp2d","rp1l"],
+		["rp2f","rp1l"],
+		["rp2b","rp1l"],
+		["rp2t","rp1r"],
+		["rp2d","rp1r"],
+		["rp2f","rp1r"],
+		["rp2b","rp1r"],
+		
+		["rp2t","rp2f"],
+		["rp2d","rp2f"],
+		["rp2t","rp2b"],
+		["rp2d","rp2b"],
+		
+		["rp2t","rp3t"],
+		["rp1l","rp3t"],
+		
+		["rp2d","rp3d"],
+		["rp1l","rp3d"],
+
+		["rp2f","rp2b"],
+		
+		["rp3t","rp3d"],
+		
+		{"breakGroup":""},
+		{"breakGroupType":0},
+        {"disableMeshBreaking":true},
+		{"beamPrecompression":1, "beamType":"|NORMAL", "beamLongBound":1.0, "beamShortBound":1.0},
+        {"name":""},
+	],
+    "hydros": [
+		["id1:","id2:"],
+		{"beamSpring":2170000,"beamDamp":400},
+		{"beamDeform":520000,"beamStrength":165000},
+		{"breakGroup":"rotor_R"},
+		["rp3t","rp1r",{"inputSource":"hydro_yaw","inputFactor":1}],
+		["rp3d","rp1r",{"inputSource":"hydro_yaw","inputFactor":1}],
+		
+		{"breakGroup":""},
+	],
+	"triangles": 
+	[
+		["id1:","id2:","id3:"],
+		{"groundModel":"metal"},
+		
+		//rear rotor
+		{"stallAngle":0.38},
+		{"dragCoef":100},
+		{"liftCoef":100},
+		["rp3t","rp2t","rp1l"],
+		["rp1l","rp3d","rp2d"],
+	],
+}
+}

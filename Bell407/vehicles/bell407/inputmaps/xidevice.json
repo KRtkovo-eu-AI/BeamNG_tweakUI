@@ -1,0 +1,33 @@
+{
+  "bindings":[
+    {
+      "action":"yaw",
+      "control":"thumblx"
+    },
+    {
+      "action":"pitch",
+      "control":"thumbry"
+    },
+    {
+      "action":"roll",
+      "control":"thumbrx"
+    },
+    {
+      "action":"lift",
+      "control":"thumbly"
+    },
+    {
+      "action":"fire_guns",
+      "control":"triggerr"
+    },
+    {
+      "action":"fire_missiles",
+      "control":"triggerl"
+    }
+  ],
+  "devicetype":"xinput",
+  "guid":"xinput0",
+  "name":"XBox Controller 1",
+  "version":1,
+  "vidpid":"XIDevice"
+}

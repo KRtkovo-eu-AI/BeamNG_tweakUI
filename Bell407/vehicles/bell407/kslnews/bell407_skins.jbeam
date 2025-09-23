@@ -1,0 +1,11 @@
+{
+"bell_skin_kslnews": {
+	"information":{
+		"authors":"AverageGameEnjoyer",
+		"name":"KSL News Chopper (AverageGameEnjoyer_)",
+		"value":1000
+	}
+    "slotType":"paint_design",
+	"globalSkin":"kslnews"
+}
+}

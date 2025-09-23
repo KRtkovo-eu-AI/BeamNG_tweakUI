@@ -1,0 +1,132 @@
+{
+  "bell407_50cal_barrel": {
+    "name": "bell407_50cal_barrel",
+    "mapTo": "bell407_50cal_barrel",
+    "class": "Material",
+    "persistentId": "",
+    "Stages": [
+      {
+        "ambientOcclusionMap": "/vehicles/bell407/50cal_barrel_ao.png",
+        "baseColorMap": "/vehicles/bell407/50cal_barrel_diff.png",
+        "metallicMap": "/vehicles/bell407/50cal_barrel_met.png",
+        "normalMap": "/vehicles/bell407/50cal_barrel_norm.png",
+        "roughnessMap": "/vehicles/bell407/50cal_barrel_ruff.png"
+      },
+      {},
+      {},
+      {}
+    ],
+    "version": 1.5
+  },
+  "bell407_50cal_main": {
+    "name": "bell407_50cal_main",
+    "mapTo": "bell407_50cal_main",
+    "class": "Material",
+    "persistentId": "",
+    "Stages": [
+      {
+        "ambientOcclusionMap": "/vehicles/bell407/50cal_main_ao.png",
+        "baseColorMap": "/vehicles/bell407/50cal_main_diff.png",
+        "metallicMap": "/vehicles/bell407/50cal_main_met.png",
+        "normalMap": "/vehicles/bell407/50cal_main_norm.png",
+        "roughnessMap": "/vehicles/bell407/50cal_main_ruff.png"
+      },
+      {},
+      {},
+      {}
+    ],
+    "version": 1.5
+  },
+  "bell407_50cal_topcover": {
+    "name": "bell407_50cal_topcover",
+    "mapTo": "bell407_50cal_topcover",
+    "class": "Material",
+    "persistentId": "",
+    "Stages": [
+      {
+        "ambientOcclusionMap": "/vehicles/bell407/50cal_topcover_ao.png",
+        "baseColorMap": "/vehicles/bell407/50cal_topcover_diff.png",
+        "metallicMap": "/vehicles/bell407/50cal_topcover_met.png",
+        "normalMap": "/vehicles/bell407/50cal_topcover_norm.png",
+        "roughnessMap": "/vehicles/bell407/50cal_topcover_ruff.png"
+      },
+      {},
+      {},
+      {}
+    ],
+    "version": 1.5
+  },
+  "bell407_crosshair": {
+    "name": "bell407_crosshair",
+    "mapTo": "bell407_crosshair",
+    "class": "Material",
+    "persistentId": "7eba79ee-481e-403d-8f5f-50a11e47c33b",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/crosshair.png",
+        "emissive": true
+      },
+      {
+        "emissive": null
+      },
+      {
+        "emissive": null
+      },
+      {
+        "emissive": null
+      }
+    ],
+    "alphaRef": 128,
+    "alphaTest": true,
+    "doubleSided": true,
+    "translucentBlendOp": "None"
+  },
+  "bell407_minigun": {
+    "name": "bell407_minigun",
+    "mapTo": "bell407_minigun",
+    "class": "Material",
+    "persistentId": "5f545b82-b677-4909-96c9-b185412726e1",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/W_Mounted_Gatling_DiffuseMap_PCout2.png",
+        "normalMap": "/vehicles/bell407/W_Mounted_Gatling_NormalMap_PCout.png"
+      },
+      {},
+      {},
+      {}
+    ]
+  },
+  "bell407_m242": {
+    "name": "bell407_m242",
+    "mapTo": "bell407_m242",
+    "class": "Material",
+    "persistentId": "",
+    "Stages": [
+      {
+        "ambientOcclusionMap": "/vehicles/bell407/m242_AO.jpg",
+        "baseColorMap": "/vehicles/bell407/m242_albedo.jpg",
+        "metallicMap": "/vehicles/bell407/m242_metallic.jpg",
+        "normalMap": "/vehicles/bell407/m242_normal.jpg",
+        "roughnessMap": "/vehicles/bell407/m242_roughness.jpg"
+      },
+      {},
+      {},
+      {}
+    ],
+    "version": 1.5
+  },
+  "m102_howitzer": {
+    "name": "m102_howitzer",
+    "mapTo": "m102_howitzer",
+    "class": "Material",
+    "persistentId": "457c6117-86c5-4636-aeff-c5c1722b2805",
+    "Stages": [
+      {
+        "colorMap": "p3dm.ru_T_MCH_HOWITZER_DIF.tga"
+      },
+      {},
+      {},
+      {}
+    ]
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "bell407_fuseskin.skin.losapd": {
+    "name": "bell407_fuseskin.skin.losapd",
+    "mapTo": "bell407_fuseskin.skin.losapd",
+    "class": "material",
+    "persistentId": "85ebbaeb-d732-45f2-9621-636a2153307b",
+    "Stages": [
+      {
+        "baseColorFactor": null,
+        "baseColorMap": "vehicles/common/null.dds",
+        "clearCoatFactor": null,
+        "instanceDiffuse": null,
+        "metallicFactor": null,
+        "normalMap": "vehicles/bell407/bell407_fuselage_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932
+      },
+      {
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          0.839999974
+        ],
+        "baseColorMap": "/vehicles/bell407/losapd/bell407_skin0_losapd_fuselage.dds",
+        "clearCoatFactor": 1,
+        "colorPaletteMap": "/vehicles/bell407/losapd/bell407_skin_losapd_fuselage_p.dds",
+        "instanceDiffuse": null,
+        "metallicFactor": 1,
+        "normalMap": "vehicles/bell407/bell407_fuselage_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": null
+      },
+      {
+        "baseColorFactor": null,
+        "clearCoatFactor": null,
+        "instanceDiffuse": true,
+        "metallicFactor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null
+      },
+      {
+        "baseColorFactor": null,
+        "clearCoatFactor": null,
+        "instanceDiffuse": null,
+        "metallicFactor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null
+      }
+    ],
+    "activeLayers": 2,
+    "alphaRef": 0,
+    "alphaTest": true,
+    "beamngDiffuseColorSlot": "2",
+    "dynamicCubemap": true,
+    "materialTag0": "beamng",
+    "materialTag1": "vehicle",
+    "translucent": true,
+    "translucentBlendOp": "None",
+    "version": 1.5
+  },
+  "bell407_tailskin.skin.losapd": {
+    "name": "bell407_tailskin.skin.losapd",
+    "mapTo": "bell407_tailskin.skin.losapd",
+    "class": "Material",
+    "persistentId": "624e63a3-50f8-4531-b2a7-2cec23e757e0",
+    "Stages": [
+      {
+        "baseColorFactor": null,
+        "baseColorMap": "vehicles/common/null.dds",
+        "clearCoatFactor": null,
+        "instanceDiffuse": null,
+        "metallicFactor": null,
+        "normalMap": "/vehicles/bell407/bell407_tail_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932
+      },
+      {
+        "baseColorFactor": [
+          1,
+          1,
+          1,
+          0.839999974
+        ],
+        "baseColorMap": "/vehicles/bell407/losapd/bell407_skin0_losapd_tail.dds",
+        "clearCoatFactor": 1,
+        "colorPaletteMap": "/vehicles/bell407/losapd/bell407_skin_losapd_tail_p.dds",
+        "instanceDiffuse": null,
+        "metallicFactor": 1,
+        "normalMap": "/vehicles/bell407/bell407_tail_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": null
+      },
+      {
+        "baseColorFactor": null,
+        "clearCoatFactor": null,
+        "instanceDiffuse": true,
+        "metallicFactor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null
+      },
+      {
+        "baseColorFactor": null,
+        "clearCoatFactor": null,
+        "instanceDiffuse": null,
+        "metallicFactor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null
+      }
+    ],
+    "activeLayers": 2,
+    "alphaRef": 0,
+    "alphaTest": true,
+    "beamngDiffuseColorSlot": "2",
+    "dynamicCubemap": true,
+    "materialTag0": "beamng",
+    "materialTag1": "vehicle",
+    "translucent": true,
+    "translucentBlendOp": "None",
+    "version": 1.5
+  }
+}

@@ -1,0 +1,169 @@
+{
+"bell_interior": {
+	"information":{
+		"authors":"DrowsySam & Dummiesman, stefan750",
+		"name":"Interior",
+	}
+    "slotType" : "bell_interior",
+	"slots": [
+		["type", "default", "description"]
+		["bell_stick","bell_stick","Flight Controls"],
+		["bell_crosshair","","Crosshair"],
+	],
+	"selfCollisionThickness":2.02,
+	"remoteCollisionThickness":2.06,
+	"scalebeamSpring":0.84,
+	"scalebeamDamp":1.3,
+	"scalebeamDeform":1.5,
+	"scalebeamStrength":1.78,
+    "glowMap":{
+		//"bell407_panel":{"simpleFunction":{"lowhighbeam":0.49}, "off":"bell407_panel", "on":"bell407_panel_ni", "on_intense":"bell407_panel_ni"},
+    }
+	"props": [
+		["func"           , "mesh"                , "idRef:", "idX:", "idY:", "baseRotation"          , "rotation"            , "translation"        , "min", "max", "offset", "multiplier"]
+    	["rotorrpm"       , "bell407_rpmndl"      , "b4r"   , "b4l" , "b3"  , {"x":-70, "y":0, "z":90}, {"x":-1, "y":0, "z":0}, {"x":0, "y":0, "z":0},     0,  1000,        0,         0.7 ],
+        ["altitude_ft100" , "bell407_altim_100"   , "b4r"   , "b4l" , "b3"  , {"x":-0, "y":0, "z":0}  , {"x":0, "y":-1, "z":0}, {"x":0, "y":0, "z":0}, -1000,  1000,        0,        0.36 ],
+        ["altitude_ft1000", "bell407_altim_1000"  , "b4r"   , "b4l" , "b3"  , {"x":-0, "y":0, "z":0}  , {"x":0, "y":-1, "z":0}, {"x":0, "y":0, "z":0}, -1000,  1000,        0,       0.036 ],
+        ["aspd"           , "bell407_airspeedndl" , "b4r"   , "b4l" , "b3"  , {"x":-0, "y":0, "z":0}  , {"x":0, "y":-1, "z":0}, {"x":0, "y":0, "z":0},     0,   350,        0,           1 ],
+        ["heading"        , "bell407_compassprop" , "b4r"   , "b4l" , "b3"  , {"x":-0, "y":180, "z":0}, {"x":0, "y":-1, "z":0}, {"x":0, "y":0, "z":0},     0,   360,        0,           1 ],
+        ["roll"           , "bell407_attitudeprop", "b4r"   , "b4l" , "b3"  , {"x":-0, "y":0, "z":0}  , {"x":0, "y":-1, "z":0}, {"x":0, "y":0, "z":0},  -360,   360,        0,           1 ],
+        ["vsi"            , "bell407_climbndl"    , "b4r"   , "b4l" , "b3"  , {"x":-0, "y":0, "z":0}  , {"x":0, "y":-1, "z":0}, {"x":0, "y":0, "z":0},  -170,   170,        0,       0.086 ],
+        ["roll"           , "bell407_tcndl"       , "b4r"   , "b4l" , "b3"  , {"x":-0, "y":0, "z":0}  , {"x":0, "y":1, "z":0} , {"x":0, "y":0, "z":0},   -20,    20,        0,           1 ],
+	 ],
+	"flexbodies": [
+		 ["mesh", "[group]:", "nonFlexMaterials"],
+         ["bell_panel", ["bell_body"]],
+         ["bell_paneldetails", ["bell_body"]],
+		 ["bell407_radiostack", ["bell_body"]],
+		 ["bell407_rthing", ["bell_body"]],
+		 ["rrpedal_sponge", ["bell_body"]],
+	 ],
+},
+"bell_stick": {
+	"information":{
+		"authors":"DrowsySam",
+		"name":"Flight Controls",
+	}
+    "slotType" : "bell_stick",
+	"slots": [
+		["type", "default", "description"]
+
+	],
+	"selfCollisionThickness":2.02,
+	"remoteCollisionThickness":2.06,
+	"scalebeamSpring":0.84,
+	"scalebeamDamp":1.3,
+	"scalebeamDeform":1.5,
+	"scalebeamStrength":1.78,
+	"props": [
+		["func"      , "mesh"              , "idRef:", "idX:", "idY:", "baseRotation"          , "rotation"                 , "translation"        , "min", "max", "offset", "multiplier"]
+    	["b407_lift_input" , "flightstick_c"     , "b4r"   , "b4l" , "b3"  , {"x":-30, "y":0, "z":0} , {"x":20, "y":0, "z":0}     , {"x":0, "y":0, "z":0},     -1,     1,        0,         -1],
+		["b407_yaw_input"  , "rrpedal_lpedals_l" , "b4r"   , "b4l" , "b3"  , {"x":10, "y":0, "z":0}  , {"x":20, "y":0, "z":0}     , {"x":0, "y":0, "z":0},     -1,     1,        0,          -1],
+		["b407_yaw_input"  , "rrpedal_lpedals_r" , "b4r"   , "b4l" , "b3"  , {"x":10, "y":0, "z":0}  , {"x":20, "y":0, "z":0}     , {"x":0, "y":0, "z":0},     -1,     1,        0,          1],
+		["b407_yaw_input"  , "rrpedal_rpedals_l" , "b4r"   , "b4l" , "b3"  , {"x":10, "y":0, "z":0}  , {"x":20, "y":0, "z":0}     , {"x":0, "y":0, "z":0},     -1,     1,        0,          -1],
+		["b407_yaw_input"  , "rrpedal_rpedals_r" , "b4r"   , "b4l" , "b3"  , {"x":10, "y":0, "z":0}  , {"x":20, "y":0, "z":0}     , {"x":0, "y":0, "z":0},     -1,     1,        0,          1],
+	],
+	"flexbodies": [
+		["mesh", "[group]:", "nonFlexMaterials"],
+		["flightstick_l", ["bell_stick_r"]],
+		["flightstick_r", ["bell_stick_l"]],
+	],
+	"nodes": [
+		["id", "posX", "posY", "posZ"],
+		{"selfCollision":false}
+		{"collision":true}
+		{"frictionCoef":0.7},
+		{"nodeMaterial":"|NM_METAL"},
+		{"nodeWeight":1.5},
+		{"group":"bell_stick_r"},
+		["st1r", -0.4, -1.1, 0.83],
+		["st2r", -0.1, -1.5, 0.83],
+		["st2rr", -0.7, -1.5, 0.83],
+		["st3r", -0.4, -1.45, 1.35],
+		{"group":"bell_stick_l"},
+		["st1l", 0.4, -1.1, 0.83],
+		["st2l", 0.1, -1.5, 0.83],
+		["st2ll", 0.7, -1.5, 0.83],
+		["st3l", 0.4, -1.45, 1.35],
+		{"group":""},
+
+	],
+	
+	"beams": [
+		["id1:", "id2:"],
+		{"beamPrecompression":1, "beamType":"|NORMAL", "beamLongBound":1.0, "beamShortBound":1.0},
+		{"beamSpring":1001000,"beamDamp":600},
+		{"beamDeform":95000,"beamStrength":1160000},
+		//right
+		["st1r","b4"],
+		["st1r","b4r"],
+		["st1r","b6"],
+		["st1r","b6r"],
+		["st2r","st2rr"],
+		["st1r","st2r"],
+		["st1r","st2rr"],
+		
+		//left
+		["st1l","b4"],
+		["st1l","b4l"],
+		["st1l","b6"],
+		["st1l","b6l"],
+		["st2l","st2ll"],
+		["st1l","st2l"],
+		["st1l","st2ll"],
+		
+		//fix to chassis
+		["st2r","b2"],
+		["st2r","b4"],
+		["st2r","b6"],
+		["st2rr","b4r"],
+		["st2rr","b6r"],
+
+		["st2l","b2"],
+		["st2l","b4"],
+		["st2l","b6"],
+		["st2ll","b4l"],
+		["st2ll","b6l"],		
+	
+		//stick sync
+		["st3l","st3r"],
+
+		{"beamPrecompression":1, "beamType":"|NORMAL", "beamLongBound":1.0, "beamShortBound":1.0},
+	],
+	
+		"hydros": [
+			["id1:","id2:"],
+			{"beamSpring":1001000,"beamDamp":1000,"beamDeform":11215000,"beamStrength":1545000},
+
+			//["st3r","st1r",{"inputSource":"brake","factor":-0.18}],
+			["st3r","st1r",{"inputSource":"b407_pitch_input","factor":0.15}],
+			["st3r","st2r",{"inputSource":"b407_roll_input","factor":0.12}],
+			["st3r","st2rr",{"inputSource":"b407_roll_input","factor":-0.12}],
+			
+			//["st3l","st1l",{"inputSource":"brake","factor":-0.18}],
+			["st3l","st1l",{"inputSource":"b407_pitch_input","factor":0.15}],
+			["st3l","st2l",{"inputSource":"b407_roll_input","factor":-0.12}],
+			["st3l","st2ll",{"inputSource":"b407_roll_input","factor":0.12}],
+		    
+			{"breakGroup":""},
+	],
+
+},
+"bell_crosshair": {
+	"information":{
+		"authors":"stefan750",
+		"name":"Crosshair",
+	}
+    "slotType" : "bell_crosshair",
+	"selfCollisionThickness":2.02,
+	"remoteCollisionThickness":2.06,
+	"scalebeamSpring":0.84,
+	"scalebeamDamp":1.3,
+	"scalebeamDeform":1.5,
+	"scalebeamStrength":1.78,
+    "props": [
+		["func"           , "mesh"                , "idRef:", "idX:", "idY:", "baseRotation"          , "rotation"            , "translation"        , "min", "max", "offset", "multiplier"]
+    	["nop"            , "crosshair"           , "b4r"   , "b4l" , "b3"  , {"x":0, "y":0, "z":0}   , {"x":0, "y":0, "z":0} , {"x":0, "y":0, "z":0},     0,  1000,        0,         1, {"baseTranslation":{"x":1.190, "y":-0.835, "z":2.100}}],
+	 ],
+},
+}

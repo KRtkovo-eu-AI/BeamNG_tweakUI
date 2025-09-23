@@ -1,0 +1,108 @@
+{
+"bell_engine": {
+	"information":{
+		"authors":"DrowsySam, stefan750",
+		"name":"Turboshaft Engine",
+	}
+    "slotType" : "bell_engine",
+	"slots": [
+		["type", "default", "description"]
+		["bell_gearbox","bell_gearbox","Gearbox"],
+	],
+	"variables": [
+        ["name", "type", "unit", "category", "default", "min", "max", "title", "description"],
+        ["$fuel", "range", "L", "Chassis", 385, 0, 385, "Fuel Volume", "Initial fuel volume", {"stepDis":0.5}],
+    ],
+    "powertrain" : [
+        ["type", "name", "inputName", "inputIndex"],
+        ["combustionEngine", "mainEngine", "dummy", 0],
+        ["torqueConverter", "torqueConverter", "mainEngine", 1],
+    ],
+    "mainEngine": {
+        "torque":[
+            ["rpm", "torque"],
+            [0, 100],
+			[4000, 900],
+            [6000, 1050],
+            [6100, 0],
+
+        ],
+        //engine performance
+        "idleRPM":2000,
+		"revLimiterRPM":6000,
+        "revLimiterType":"soft",
+        //max rpm physically capable of
+        "maxRPM":7000,
+        "inertia":2.00,
+        "friction":50,
+        "dynamicFriction":0.05,
+        "engineBrakeTorque":46,
+        "burnEfficiency":0.2,
+		"electricsThrottleName":"gearIndex"
+        "breakTriggerBeam":"EngineDamage",
+        "energyStorage": "mainTank",
+        "requiredEnergyType":"gasoline",
+        "particulates":0.0,
+		"idleParticulates":0.0,
+        "instantAfterFireCoef": 0,
+        "sustainedAfterFireCoef": 0.0,
+        "instantAfterFireVolumeCoef": 0.0,
+        "sustainedAfterFireVolumeCoef": 0.0,
+        "shiftAfterFireVolumeCoef": 0.0,
+        //starter motor
+        "starterSample":"vehicles/bell407/sounds/heli-starter.ogg",
+        "starterVolume":1.2,
+        "starterThrottleKillTime":0.96,
+        "idleRPMStartRate":1,
+        "idleRPMStartCoef":1,
+        "maxIdleThrottle":0.5,
+		"torqueReactionNodes:":["b9","b7","b10"],
+    },
+    "torqueConverter": {
+        "uiName":"Torque Converter",
+        "converterDiameter":0.4,
+        "converterStiffness":1,
+        "couplingAVRatio":0.95,
+        "stallTorqueRatio":10,
+    },
+    "vehicleController": {
+		"arcadeAutoBrakeAmount": 0,
+		"smartParkingBrakeActiveUponSpawn":false,
+    },
+    "energyStorage": [
+        ["type", "name"],
+        ["fuelTank", "mainTank"],
+    ],
+    "mainTank": {
+        "energyType":"gasoline",
+        "fuelCapacity": 385,
+        "startingFuelCapacity": "$fuel",
+        //"fuel": {"[engineGroup]:":["fuel"]},
+        //"breakTriggerBeam": "fuelTank",
+    },
+},
+"bell_gearbox": {
+	"information":{
+		"authors":"DrowsySam",
+		"name":"Gearbox",
+	}
+    "slotType" : "bell_gearbox",
+	"powertrain" : [
+        ["type", "name", "inputName", "inputIndex"],
+        ["automaticGearbox", "gearbox", "torqueConverter", 1],
+        ["differential", "differential_R", "gearbox", 1, {"diffType":"locked", "lockTorque":100000, "lockSpring":1000000, "uiName":"Differential", "defaultVirtualInertia":0.1}],
+    ],
+    "gearbox": {
+        "uiName":"Gearbox",
+        "gearRatios":[0, 2.9],
+
+        //"friction": 0.1,
+        //"gearboxNode:":["tra1"],
+    },
+	"vehicleController": {
+		"shiftLogicName":"automaticGearbox",
+        "automaticModes":"ND",
+		"defaultAutomaticMode":"D",
+    },
+}
+}

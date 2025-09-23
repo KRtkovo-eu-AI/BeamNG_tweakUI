@@ -1,0 +1,11 @@
+{
+"bell_skin_colorable": {
+	"information":{
+		"authors":"stefan750",
+		"name":"Default (Colorable)",
+		"value":1000
+	}
+    "slotType":"paint_design",
+	"globalSkin":"DefaultColorable"
+}
+}

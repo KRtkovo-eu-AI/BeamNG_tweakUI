@@ -1,0 +1,11 @@
+{
+"bell_skin_military2": {
+	"information":{
+		"authors":"AverageGameEnjoyer",
+		"name":"Military (Woodland) (AverageGameEnjoyer_)",
+		"value":1000
+	}
+    "slotType":"paint_design",
+	"globalSkin":"military2"
+}
+}

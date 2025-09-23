@@ -1,0 +1,37 @@
+{
+"bell_spotlight": {
+	"information":{
+		"authors":"Dummiesman",
+		"name":"Spotlight",
+	}
+    "slotType" : "bell_spotlight",
+	"selfCollisionThickness":2.02,
+	"remoteCollisionThickness":2.06,
+	"scalebeamSpring":0.84,
+	"scalebeamDamp":1.3,
+	"scalebeamDeform":1.5,
+	"scalebeamStrength":1.78,
+	"flexbodies": [
+		 ["mesh", "[group]:", "nonFlexMaterials"],
+		 ["bell407_spotlight", ["bell_body"]],
+	],
+	"props": [
+		["func"      , "mesh"              , "idRef:", "idX:", "idY:"            , "baseRotation"        , "rotation"                 , "translation"        , "min", "max", "offset", "multiplier"]
+        {
+			"lightInnerAngle":30
+			"lightOuterAngle":45
+			"lightAttenuation":{"x":0, "y":1, "z":1}
+			"lightCastShadows":true
+            "flareName":"vehicleHeadLightFlare"
+            "cookieName":"art/special/BNG_light_cookie_headlight.png"
+            "texSize":512
+            "shadowSoftness":0.5
+			"lightColor":{"r":255, "g":255, "b":255, "a":255}	
+			"lightBrightness":5
+			"lightRange":500
+			"flareScale":1
+		}
+        ["fog"    , 	"SPOTLIGHT"    ,  "b12", "b12r", "b11", {"x":-20, "y":-3, "z":0} , {"x":0, "y":0, "z":0}    , {"x":0, "y":0, "z":0}, 0, 0, 0, 1, {"baseTranslation":{"x":0, "y":-0.22, "z":0.4}}],
+	 ],
+}
+}

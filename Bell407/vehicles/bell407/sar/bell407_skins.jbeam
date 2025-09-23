@@ -1,0 +1,11 @@
+{
+"bell_skin_sar": {
+	"information":{
+		"authors":"AverageGameEnjoyer",
+		"name":"Search and Rescue (AverageGameEnjoyer_)",
+		"value":1000
+	}
+    "slotType":"paint_design",
+	"globalSkin":"sar"
+}
+}

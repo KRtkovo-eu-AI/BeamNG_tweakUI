@@ -1,0 +1,11 @@
+{
+"bell_skin_losapd": {
+	"information":{
+		"authors":"AverageGameEnjoyer",
+		"name":"LAPD (AverageGameEnjoyer_)",
+		"value":1000
+	}
+    "slotType":"paint_design",
+	"globalSkin":"losapd"
+}
+}

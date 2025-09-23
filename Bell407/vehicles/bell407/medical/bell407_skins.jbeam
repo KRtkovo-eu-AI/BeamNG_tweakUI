@@ -1,0 +1,11 @@
+{
+"bell_skin_medical": {
+	"information":{
+		"authors":"AverageGameEnjoyer",
+		"name":"Medical (AverageGameEnjoyer_)",
+		"value":1000
+	}
+    "slotType":"paint_design",
+	"globalSkin":"medical"
+}
+}

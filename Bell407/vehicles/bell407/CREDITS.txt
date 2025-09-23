@@ -1,0 +1,43 @@
+ORIGINAL MOD CREDITS:
+
+Jbeam : 
+        DrowsySam
+        Dummiesman
+Textures :
+        3dregenerator
+        FlightGear UK (http://www.fguk.eu/index.php/hangar/download/13-rotary-wing/466-bell-407, skins only; licensed under GPL)
+        Sim Innovations (https://www.siminnovations.com/, used with permission)
+        VeyronEB
+        SoHigh00
+        Dummiesman
+Modeling :
+        3dregenerator
+        Dummiesman
+Scripting :
+        Dummiesman
+        CarlosAir
+Beta Testing :
+        VeyronEB
+        CarlosAir
+
+ADDITIONAL CREDITS:
+
+Fixed version by Eren28: https://www.beamng.com/threads/fixed-bell-407-updated.90807/
+
+Fixes and updates by stefan750:
+        - New swashplate-like controls by adjusting individual blade pitch instead of tilting the rotor
+		- New vehicle specific keybinds for all controls
+        - Some Jbeam work (cleaned up some console warnings, body stability improvements, reduced vibrations, slight changes to aero and weight distribution, some changes to breakgroups)
+        - Improved powertrain
+        - Added starter and turbine sounds
+                Sound credit: Explorer Helicopter Engine Start Up Ignition Sequence and Idle .wav by Paul368 -- https://freesound.org/s/410604/ -- License: Attribution 4.0
+                Cut and modified by stefan750
+        - Fixed spotlight and adjusted interior and landing lights a bit
+        - Added configs to vehicle selector
+        - Made some cockpit instruments more accurate
+        - Added collective stick to cockpit, reduced flight stick warping, and made tail rotor pedals move
+        - Added input events for custom controls and enabled smoothing
+        - Added tow hook
+        - Switched to materials.json and added a colorable PBR skin
+
+Additional Skins provided by AverageGameEnjoyer

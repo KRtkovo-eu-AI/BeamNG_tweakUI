@@ -1,0 +1,619 @@
+{
+  "b4invisible": {
+    "name": "b4invisible",
+    "mapTo": "invis",
+    "class": "Material",
+    "persistentId": "612b0126-9006-4552-a06d-7dedf715199b",
+    "Stages": [
+      {
+        "colorMap": "vehicles/common/invisible.dds"
+      },
+      {},
+      {},
+      {}
+    ],
+    "translucent": true,
+    "translucentBlendOp": "AddAlpha"
+  },
+  "bell407_blades": {
+    "name": "bell407_blades",
+    "mapTo": "bell407_blades",
+    "class": "Material",
+    "persistentId": "69547bfd-4c21-4480-bc1e-cec83a055212",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_other.dds"
+      },
+      {},
+      {},
+      {}
+    ]
+  },
+  "bell407_carpet": {
+    "name": "bell407_carpet",
+    "mapTo": "bell407_carpet",
+    "class": "Material",
+    "persistentId": "ae683964-06d2-4266-8d54-41ece057c76f",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_carpet.dds",
+        "normalMap": "vehicles/bell407/bell407_carpet_nm.dds"
+      },
+      {},
+      {},
+      {}
+    ]
+  },
+  "bell407_chrome": {
+    "name": "bell407_chrome",
+    "mapTo": "bell407_chrome",
+    "class": "Material",
+    "persistentId": "c9ca3a66-734f-4f18-a582-8a317d427a5e",
+    "Stages": [
+      {},
+      {},
+      {},
+      {}
+    ],
+    "cubemap": "global_cubemap_metalblurred"
+  },
+  "bell407_chromed": {
+    "name": "bell407_chromed",
+    "mapTo": "bell407_dynchrome",
+    "class": "Material",
+    "persistentId": "b5034330-bf24-447b-b423-23a47ec6f484",
+    "Stages": [
+      {},
+      {},
+      {},
+      {}
+    ],
+    "dynamicCubemap": true
+  },
+  "bell407_fuselage": {
+    "name": "bell407_fuselage",
+    "mapTo": "bell407_fuseskin",
+    "class": "Material",
+    "persistentId": "8ff900b3-cf3c-4af1-a8ad-477054ffd11c",
+    "Stages": [
+      {
+        "colorMap": "vehicles/common/null.dds",
+        "diffuseColor": null,
+        "normalMap": "vehicles/bell407/bell407_fuselage_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932,
+        "useAnisotropic": true
+      },
+      {
+        "colorMap": "vehicles/bell407/bell407_skin0_fuselage.dds",
+        "diffuseColor": [
+          1,
+          1,
+          1,
+          0.839999974
+        ],
+        "normalMap": "vehicles/bell407/bell407_fuselage_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932,
+        "useAnisotropic": true
+      },
+      {
+        "diffuseColor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      },
+      {
+        "diffuseColor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      }
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "beamngDiffuseColorSlot": "2",
+    "dynamicCubemap": true,
+    "materialTag0": "beamng",
+    "materialTag1": "vehicle",
+    "translucent": true,
+    "translucentBlendOp": "None"
+  },
+  "bell407_glass": {
+    "name": "bell407_glass",
+    "mapTo": "bell407_glass",
+    "class": "Material",
+    "persistentId": "e72bfcb8-bf1a-4694-8042-5fe225bf7421",
+    "Stages": [
+      {
+        "diffuseColor": [
+          0.0350000001,
+          0.0820000023,
+          0.141000003,
+          0.180000007
+        ],
+        "reflectivityMap": "vehicles/common/glass_base.dds"
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      }
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "castShadows": false,
+    "dynamicCubemap": true,
+    "translucent": true,
+    "translucentBlendOp": "Sub"
+  },
+  "bell407_glass_int": {
+    "name": "bell407_glass_int",
+    "mapTo": "bell407_glass_int",
+    "class": "Material",
+    "persistentId": "7249aca2-2cd4-44d5-8be3-d6881bd0c20f",
+    "Stages": [
+      {
+        "diffuseColor": [
+          0.0350000001,
+          0.0820000023,
+          0.141000003,
+          0.100000001
+        ]
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      }
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "castShadows": false,
+    "translucent": true,
+    "translucentBlendOp": "Sub"
+  },
+  "bell407_greenglass": {
+    "name": "bell407_greenglass",
+    "mapTo": "bell407_greenglass",
+    "class": "Material",
+    "persistentId": "6693db81-c022-4ed1-91ae-09ade7630f80",
+    "Stages": [
+      {
+        "diffuseColor": [
+          0.0270000007,
+          0.49000001,
+          0.26699999,
+          0.109999999
+        ],
+        "reflectivityMap": "vehicles/common/glass_base.dds"
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      }
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "castShadows": false,
+    "dynamicCubemap": true,
+    "translucent": true,
+    "translucentBlendOp": "Sub"
+  },
+  "bell407_greenglass_int": {
+    "name": "bell407_greenglass_int",
+    "mapTo": "bell407_greenglass_int",
+    "class": "Material",
+    "persistentId": "151464da-54f3-4c06-8cd5-7c74a8cf60ea",
+    "Stages": [
+      {
+        "diffuseColor": [
+          0.0270000007,
+          0.49000001,
+          0.26699999,
+          0.109999999
+        ]
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      }
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "castShadows": false,
+    "translucent": true,
+    "translucentBlendOp": "Sub"
+  },
+  "bell407_interior": {
+    "name": "bell407_interior",
+    "mapTo": "bell407_interior",
+    "class": "Material",
+    "persistentId": "18413a41-4137-4ab7-a618-85c555774873",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_interior.dds",
+        "normalMap": "vehicles/bell407/bell407_interior_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.567986369
+      },
+      {
+        "pixelSpecular": null,
+        "roughnessFactor": null
+      },
+      {
+        "pixelSpecular": null,
+        "roughnessFactor": null
+      },
+      {
+        "pixelSpecular": null,
+        "roughnessFactor": null
+      }
+    ],
+    "specularStrength0": "0.0980"
+  },
+  "bell407_lightl": {
+    "name": "bell407_lightl",
+    "mapTo": "bell407_taillight_l",
+    "class": "Material",
+    "persistentId": "26c87a02-5bc1-49a7-9e37-c9c1840b3b2b",
+    "Stages": [
+      {
+        "diffuseColor": [
+          0.800000012,
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      }
+    ]
+  },
+  "bell407_lightr": {
+    "name": "bell407_lightr",
+    "mapTo": "bell407_taillight_r",
+    "class": "Material",
+    "persistentId": "71e91b71-897d-43d7-8ca9-8ddb6a4d3c9c",
+    "Stages": [
+      {
+        "diffuseColor": [
+          0,
+          0.400000006,
+          0,
+          1
+        ]
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      },
+      {
+        "diffuseColor": null
+      }
+    ]
+  },
+  "bell407_mech": {
+    "name": "bell407_mech",
+    "mapTo": "bell407_mech",
+    "class": "Material",
+    "persistentId": "3f2f041b-d37d-4db4-9e3c-7c53f10f4022",
+    "Stages": [
+      {
+        "colorMap": "vehicles/common/null.dds",
+        "diffuseColor": null,
+        "normalMap": "vehicles/bell407/bell407_tail_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932,
+        "useAnisotropic": true
+      },
+      {
+        "colorMap": "vehicles/bell407/bell407_interior.dds",
+        "diffuseColor": [
+          1,
+          1,
+          1,
+          0.939999998
+        ],
+        "normalMap": "vehicles/bell407/bell407_tail_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932,
+        "useAnisotropic": true
+      },
+      {
+        "diffuseColor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      },
+      {
+        "diffuseColor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      }
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "beamngDiffuseColorSlot": "2",
+    "dynamicCubemap": true,
+    "materialTag0": "beamng",
+    "materialTag1": "vehicle",
+    "translucentBlendOp": "None"
+  },
+  "bell407_misc": {
+    "name": "bell407_misc",
+    "mapTo": "bell407_misc",
+    "class": "Material",
+    "persistentId": "fae2d87f-5846-44bb-8c83-d365dfc4b086",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_other.dds"
+      },
+      {},
+      {},
+      {}
+    ]
+  },
+  "bell407_panel": {
+    "name": "bell407_panel",
+    "mapTo": "bell407_panel",
+    "class": "Material",
+    "persistentId": "e7c53cb3-447b-489a-9bde-2317a37a44df",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_panel.dds",
+        "useAnisotropic": true
+      },
+      {
+        "useAnisotropic": null
+      },
+      {
+        "useAnisotropic": null
+      },
+      {
+        "useAnisotropic": null
+      }
+    ],
+    "translucentBlendOp": "None"
+  },
+  "bell407_panel_ni": {
+    "name": "bell407_panel_ni",
+    "mapTo": "bell407_panel_ni",
+    "class": "Material",
+    "persistentId": "b09a8c13-7111-47d8-8a4e-054bdef4460e",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_panel.dds",
+        "diffuseColor": null,
+        "emissive": null,
+        "useAnisotropic": true
+      },
+      {
+        "colorMap": "vehicles/bell407/bell407_panel_g.dds",
+        "diffuseColor": [
+          1,
+          1,
+          1,
+          0.649999976
+        ],
+        "emissive": true,
+        "useAnisotropic": null
+      },
+      {
+        "diffuseColor": null,
+        "emissive": null,
+        "useAnisotropic": null
+      },
+      {
+        "diffuseColor": null,
+        "emissive": null,
+        "useAnisotropic": null
+      }
+    ],
+    "translucentBlendOp": "None"
+  },
+  "bell407_panelface": {
+    "name": "bell407_panelface",
+    "mapTo": "bell407_panelface",
+    "class": "Material",
+    "persistentId": "75515e88-7502-44a1-a68c-6c23aadef96a",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_panelface.dds",
+        "normalMap": "vehicles/bell407/bell407_panelface_nm.png",
+        "pixelSpecular": true,
+        "roughnessFactor": 0.567986369,
+        "useAnisotropic": true
+      },
+      {
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      },
+      {
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      },
+      {
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      }
+    ],
+    "specularStrength0": "0.0980",
+    "translucentBlendOp": "None"
+  },
+  "bell407_panelt": {
+    "name": "bell407_panelt",
+    "mapTo": "bell407_panel_trans",
+    "class": "Material",
+    "persistentId": "0ae2d234-c8ca-4e62-a5ca-0924d8b15c03",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_panel.dds",
+        "useAnisotropic": true
+      },
+      {
+        "useAnisotropic": null
+      },
+      {
+        "useAnisotropic": null
+      },
+      {
+        "useAnisotropic": null
+      }
+    ],
+    "translucent": true,
+    "translucentBlendOp": "Sub"
+  },
+  "bell407_radiostack": {
+    "name": "bell407_radiostack",
+    "mapTo": "bell407_radiostack",
+    "class": "Material",
+    "persistentId": "28e441ac-ad20-4a65-b8db-6957b54930b6",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_radiostack.dds"
+      },
+      {},
+      {},
+      {}
+    ]
+  },
+  "bell407_rotor": {
+    "name": "bell407_rotor",
+    "mapTo": "bell407_rotor",
+    "class": "Material",
+    "persistentId": "457c6117-86c5-4636-aeff-c5c1722b2805",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_rotor.dds"
+      },
+      {},
+      {},
+      {}
+    ]
+  },
+  "bell407_rotor_blur": {
+    "name": "bell407_rotor_blur",
+    "mapTo": "bell407_rotor_blur",
+    "class": "Material",
+    "persistentId": "285fc51d-2174-4754-a181-9a2ab3166342",
+    "Stages": [
+      {
+        "colorMap": "vehicles/bell407/bell407_rotorblur.dds"
+      },
+      {},
+      {},
+      {}
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "castShadows": false,
+    "doubleSided": true,
+    "translucent": true,
+    "translucentBlendOp": "Sub"
+  },
+  "bell407_sodacan": {
+    "name": "bell407_sodacan",
+    "mapTo": "sodacan",
+    "class": "Material",
+    "persistentId": "4658b27d-1794-4a50-ae0b-1bc20c3d386c",
+    "Stages": [
+      {
+        "diffuseColor": [
+          0.639999986,
+          0.639999986,
+          0.639999986,
+          1
+        ],
+        "specular": [
+          0.000488280988,
+          0.000488280988,
+          0.000488280988,
+          1
+        ]
+      },
+      {},
+      {},
+      {}
+    ],
+    "translucentBlendOp": "None"
+  },
+  "bell407_tail": {
+    "name": "bell407_tail",
+    "mapTo": "bell407_tailskin",
+    "class": "Material",
+    "persistentId": "d0f323be-e2af-42e0-a3db-9923b5d77889",
+    "Stages": [
+      {
+        "colorMap": "vehicles/common/null.dds",
+        "diffuseColor": null,
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932,
+        "useAnisotropic": true
+      },
+      {
+        "colorMap": "vehicles/bell407/bell407_skin0_tail.dds",
+        "diffuseColor": [
+          1,
+          1,
+          1,
+          0.839999974
+        ],
+        "pixelSpecular": true,
+        "roughnessFactor": 0.722649932,
+        "useAnisotropic": true
+      },
+      {
+        "diffuseColor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      },
+      {
+        "diffuseColor": null,
+        "pixelSpecular": null,
+        "roughnessFactor": null,
+        "useAnisotropic": null
+      }
+    ],
+    "alphaRef": 0,
+    "alphaTest": true,
+    "beamngDiffuseColorSlot": "2",
+    "dynamicCubemap": true,
+    "materialTag0": "beamng",
+    "materialTag1": "vehicle",
+    "translucent": true,
+    "translucentBlendOp": "None"
+  }
+}

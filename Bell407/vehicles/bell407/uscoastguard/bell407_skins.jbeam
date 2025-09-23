@@ -1,0 +1,11 @@
+{
+"bell_skin_uscoastguard": {
+	"information":{
+		"authors":"AverageGameEnjoyer",
+		"name":"US Coast Guard (AverageGameEnjoyer_)",
+		"value":1000
+	}
+    "slotType":"paint_design",
+	"globalSkin":"uscoastguard"
+}
+}

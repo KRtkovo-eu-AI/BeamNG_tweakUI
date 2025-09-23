@@ -1,0 +1,8 @@
+{
+    "sounds":[
+        ["group",   "filename",       "profile",            "nodeName", "source", "factor", "offset", "minVolume", "minPitch", "maxVolume", "maxPitch", "pitchBlendInStartValue", "pitchBlendInEndValue", "volumeBlendInStartValue",  "volumeBlendInEndValue", "volumeBlendOutStartValue", "volumeBlendOutEndValue", "volumeModifiers",   "pitchModifiers"],
+        ["default", "Xhe4.ogg",       "AudioDefaultLoop3D", "em", "rotorrpm",        1,        0,           0,          0,         1.2,          2,                        0,                    850,                       100,                      400,                     999998,                   999999,                [],                [] ], 
+		["default", "turbine-low.ogg","AudioDefaultLoop3D", "ENGINE",      "rpm",        1,        0,           0,          0,         1.2,          2,                        0,                   6000,                       300,                     1000,                       4000,                     7000,                [],                [] ], 
+		//["default", "turbine-med.ogg","AudioDefaultLoop3D", "ENGINE",      "rpm",        1,        0,           0,          0,         0.5,          2,                        0,                   6000,                      2000,                     6000,                     999998,                   999999,                [],                [] ], 
+    ]
+}

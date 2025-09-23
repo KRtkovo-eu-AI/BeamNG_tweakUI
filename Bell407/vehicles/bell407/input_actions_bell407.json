@@ -1,0 +1,37 @@
+// this file holds all the actions that only this specific vehicle can perform
+// ===========================================================================
+// the non self-descriptive fields are:
+// "onChange":   code to run when the controller position changes     (applies to: buttons, keys, pov hat, axes)
+// "onDown":     code to run when the controller becomes pressed down (applies to: buttons, keys, pov hat)
+// "onUp":       code to run when the controller is lifted up         (applies to: buttons, keys, pov hat)
+// "onRelative": code to run when the controller position changes     (applies to: mouse axis when holding right mouse button)
+// "ctx" (defaults to 'vlua'): where the code above ^ must be run. it can be:
+//    - vlua for vehicle lua async
+//    - elua for engine  lua async
+//    - tlua for engine  lua  sync
+//    - ui for javascript    async
+//    - ts for torquescript   sync
+// "isBasic" (defaults to true): whether the binding must show always (true), or only when 'advanced bindings' checkbox is marked (false)
+// "isCentered" (defaults to false): whether the axis values will be reported from -1 to +1 (true) or from 0 to +1 (false)
+// "order":      helps set the display order in the Controls menu
+{
+"lift"        :{"order":  1, "onChange":"input.event('b407_lift', VALUE, FILTERTYPE)", "isCentered":true, "title": "Collective", "desc": "Collective control for increasing or decreasing lift" },
+"lift_up"     :{"order":  2, "onChange":"input.event('b407_lift', VALUE, FILTERTYPE)", "title": "Collective Up", "desc": "Collective control for increasing lift" },
+"lift_down"   :{"order":  3, "onChange":"input.event('b407_lift', -VALUE, FILTERTYPE)", "title": "Collective Down", "desc": "Collective control for decreasing lift" },
+
+"pitch"       :{"order":  4, "onChange":"input.event('b407_pitch', VALUE, FILTERTYPE)", "isCentered":true, "title": "Cyclic Pitch", "desc": "Cyclic control for pushing the nose of the helicopter up or down" },
+"pitch_up"    :{"order":  5, "onChange":"input.event('b407_pitch', -VALUE, FILTERTYPE)", "title": "Cyclic Pitch Up", "desc": "Cyclic control for pushing the nose of the helicopter up" },
+"pitch_down"  :{"order":  6, "onChange":"input.event('b407_pitch', VALUE, FILTERTYPE)", "title": "Cyclic Pitch Down", "desc": "Cyclic control for pushing the nose of the helicopter down" },
+
+"roll"        :{"order":  7, "onChange":"input.event('b407_roll', VALUE, FILTERTYPE)", "isCentered":true, "title": "Cyclic Roll", "desc": "Cyclic control for rolling the helicopter to the left or right" },
+"roll_left"   :{"order":  8, "onChange":"input.event('b407_roll', -VALUE, FILTERTYPE)", "title": "Cyclic Roll Left", "desc": "Cyclic control for rolling the helicopter to the left" },
+"roll_right"  :{"order":  9, "onChange":"input.event('b407_roll', VALUE, FILTERTYPE)", "title": "Cyclic Roll Right", "desc": "Cyclic control for rolling the helicopter to the right" },
+
+"yaw"      :{"order":  10, "onChange":"input.event('b407_yaw', VALUE, FILTERTYPE)", "isCentered":true, "title": "Tail Rotor Yaw", "desc": "Tail Rotor control for turning left or right" },
+"yaw_left" :{"order":  11, "onChange":"input.event('b407_yaw', -VALUE, FILTERTYPE)", "title": "Tail Rotor Yaw Left", "desc": "Tail Rotor control for turning left" },
+"yaw_right":{"order":  12, "onChange":"input.event('b407_yaw', VALUE, FILTERTYPE)", "title": "Tail Rotor Yaw Right", "desc": "Tail Rotor control for turning right" },
+
+"fire_guns" :{"order":  11, "onChange":"electrics.values.fireguns = VALUE", "title": "Fire Guns", "desc": "Fires machineguns installed on the helicopter" },
+"fire_missiles":{"order":  12, "onChange":"electrics.values.firemissiles = VALUE", "title": "Fire Missiles", "desc": "Fires missile launchers installed on the helicopter" }
+}
+
