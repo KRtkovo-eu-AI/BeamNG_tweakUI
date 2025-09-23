@@ -40,5 +40,9 @@
       "roughness":0.5
     }
   ],
-  "parts":{}
+  "parts":{
+    "bell_electronics":"bell_electronics",
+    "bell_assists":"bell_assists",
+    "bell_survey_autopilot":"bell_survey_autopilot"
+  }
 }

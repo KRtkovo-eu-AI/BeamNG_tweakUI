@@ -1,0 +1,15 @@
+{
+"bell_survey_autopilot": {
+        "information":{
+                "authors":"stefan750",
+                "name":"Surveying Autopilot",
+                "description":"Specialized autopilot module tuned for survey stability and waypoint tracking."
+        }
+    "slotType" : "bell_survey_autopilot",
+        "controller": [
+                ["fileName"],
+                ["407surveyAutopilot", {}],
+                ["407surveyAutopilotHooks", {}],
+        ],
+}
+}
