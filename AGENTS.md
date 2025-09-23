@@ -1,0 +1,1 @@
+Pro implementaci této funkcionality prosím projdi složku ".beamng\orig-0.36" kde jsou originální LUA scripty a kompletní UI scripty (v souboru "ui.zip", který musíš unzipovat), abys nastudoval a inspiroval se, jakým zpùsobem je možné získat požadované informace
