@@ -384,10 +384,10 @@ angular.module('beamng.apps')
       }
 
       function autopilotCommand(fnName, payload, callback) {
-        let lua = `return extensions.surveyingAutopilot.${fnName}()`
+        let lua = `extensions.surveyingAutopilot.${fnName}()`
         if (payload !== undefined) {
           try {
-            lua = `return extensions.surveyingAutopilot.${fnName}(${bngApi.serializeToLua(payload)})`
+            lua = `extensions.surveyingAutopilot.${fnName}(${bngApi.serializeToLua(payload)})`
           } catch (e) {
             console.error('Failed to serialise payload for surveyingAutopilot', e)
           }
@@ -621,7 +621,7 @@ angular.module('beamng.apps')
       }
 
       function requestInstallCheck() {
-        runOnActive('return extensions.surveyingAutopilot and extensions.surveyingAutopilot.isInstalled()', function (result) {
+        runOnActive('extensions.surveyingAutopilot and extensions.surveyingAutopilot.isInstalled()', function (result) {
           $scope.$evalAsync(function () {
             if (result) {
               setInstallState('ready')
