@@ -1,0 +1,9 @@
+{
+  "name": "Traffic Performance Fix",
+  "description": "Restores 0.36-style traffic tracking with adaptive AI caching and log instrumentation for BeamNG.drive 0.37.",
+  "version": "1.1",
+  "authors": ["BeamNG_tweakUI Modding"],
+  "contact": "",
+  "type": "Modification",
+  "lua": true
+}
