@@ -67,6 +67,13 @@ local holdTimer = 0
 
 local lastOutputs = {lift = 0, pitch = 0, roll = 0, yaw = 0}
 
+local controlBindings = {
+        lift = {input = "b407_lift", electric = "b407_lift_input"},
+        pitch = {input = "b407_pitch", electric = "b407_pitch_input"},
+        roll = {input = "b407_roll", electric = "b407_roll_input"},
+        yaw = {input = "b407_yaw", electric = "b407_yaw_input"}
+}
+
 local planIdCounter = 0
 
 local function copyVec3(vec)
@@ -100,6 +107,24 @@ local function clamp(val, min, max)
         if val < min then return min end
         if val > max then return max end
         return val
+end
+
+local function applyControlOutput(controlName, value)
+        local binding = controlBindings[controlName]
+        if not binding then
+                return
+        end
+
+        local clampedValue = clamp(value or 0, -1, 1)
+        lastOutputs[controlName] = clampedValue
+
+        if input and input.event then
+                input.event(binding.input, clampedValue, -1)
+        end
+
+        if electrics and electrics.values then
+                electrics.values[binding.electric] = clampedValue
+        end
 end
 
 local function getVelocityComponents()
@@ -144,14 +169,10 @@ local function resetControllers()
 end
 
 local function releaseControls()
-        electrics.values["b407_lift_input"] = 0
-        electrics.values["b407_pitch_input"] = 0
-        electrics.values["b407_roll_input"] = 0
-        electrics.values["b407_yaw_input"] = 0
-        lastOutputs.lift = 0
-        lastOutputs.pitch = 0
-        lastOutputs.roll = 0
-        lastOutputs.yaw = 0
+        applyControlOutput("lift", 0)
+        applyControlOutput("pitch", 0)
+        applyControlOutput("roll", 0)
+        applyControlOutput("yaw", 0)
 end
 
 local function updateStatusFromPlan()
@@ -489,24 +510,22 @@ local function controlToTarget(dt)
         if not targetHeading then
                 targetHeading = getHeadingToTarget(pos, currentTargetPos)
         end
+
+        local liftOutput = clamp(altOutput, -1, 1)
+        local pitchOutput = clamp(pitchOut, -1, 1)
+        local rollOutput = clamp(rollOut, -1, 1)
+        local yawOutput = lastOutputs.yaw or 0
+
         if targetHeading then
                 local yawSetpoint = yaw + clamp(normalizeAngle(targetHeading - yaw), -0.6, 0.6)
                 local yawOut = yawPID:get(yawSmoothed, yawSetpoint, dt)
-                lastOutputs.yaw = clamp(yawOut, -1, 1)
-                electrics.values["b407_yaw_input"] = lastOutputs.yaw
+                yawOutput = clamp(yawOut, -1, 1)
         end
 
-        lastOutputs.lift = clamp(altOutput, -1, 1)
-        lastOutputs.pitch = clamp(pitchOut, -1, 1)
-        lastOutputs.roll = clamp(rollOut, -1, 1)
-
-        electrics.values["b407_lift_input"] = lastOutputs.lift
-        electrics.values["b407_pitch_input"] = lastOutputs.pitch
-        electrics.values["b407_roll_input"] = lastOutputs.roll
-
-        if not targetHeading then
-                electrics.values["b407_yaw_input"] = lastOutputs.yaw or 0
-        end
+        applyControlOutput("lift", liftOutput)
+        applyControlOutput("pitch", pitchOutput)
+        applyControlOutput("roll", rollOutput)
+        applyControlOutput("yaw", yawOutput)
 end
 
 local function updateProgress()

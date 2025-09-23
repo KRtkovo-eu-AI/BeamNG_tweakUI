@@ -156,23 +156,26 @@ angular.module('beamng.apps')
         return Number.isFinite(num) ? num : fallback
       }
 
+      function pickCoordinate(source, keys) {
+        for (let i = 0; i < keys.length; i += 1) {
+          const key = keys[i]
+          if (source[key] !== undefined && source[key] !== null) {
+            return source[key]
+          }
+        }
+        return undefined
+      }
+
       function clonePoint(source) {
-        if (!source) return null
-        if (Array.isArray(source)) {
-          return {
-            x: toNumber(source[0], 0),
-            y: toNumber(source[1], 0),
-            z: toNumber(source[2], 0)
-          }
+        if (!source || typeof source !== 'object') return null
+        const xVal = pickCoordinate(source, ['x', 'X', 0, '0', 1, '1'])
+        const yVal = pickCoordinate(source, ['y', 'Y', 1, '1', 2, '2'])
+        const zVal = pickCoordinate(source, ['z', 'Z', 2, '2', 3, '3'])
+        return {
+          x: toNumber(xVal, 0),
+          y: toNumber(yVal, 0),
+          z: toNumber(zVal, 0)
         }
-        if (typeof source === 'object') {
-          return {
-            x: toNumber(source.x, 0),
-            y: toNumber(source.y, 0),
-            z: toNumber(source.z, 0)
-          }
-        }
-        return null
       }
 
       function applyHomePoint(result, options) {
