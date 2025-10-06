@@ -39,7 +39,8 @@ angular.module('beamng.apps')
         planId: null,
         event: null,
         rotorRPM: 0,
-        altitude: 0
+        altitude: 0,
+        awaitingPatternStart: false
       }
 
       const patternGeometry = {
@@ -293,6 +294,10 @@ angular.module('beamng.apps')
       }
 
       function updateStatusText() {
+        if ($scope.status.state === 'holding' && $scope.status.awaitingPatternStart) {
+          $scope.statusText = 'Holding at start - press Start survey to begin pattern'
+          return
+        }
         $scope.statusText = stateLabels[$scope.status.state] || ($scope.status.state || 'Unknown')
       }
 
@@ -842,6 +847,9 @@ angular.module('beamng.apps')
         if ($scope.installState.status !== 'ready') return false
         if ($scope.pending.start || $scope.pending.arm) return false
         if ($scope.status.armed || $scope.status.state === 'armed') return true
+        if ($scope.status.active) {
+          return !!$scope.status.awaitingPatternStart
+        }
         return !!($scope.startPoint || $scope.homePoint)
       }
 
