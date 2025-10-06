@@ -35,6 +35,7 @@ local status = {
         event = nil,
         rotorRPM = 0,
         altitude = 0,
+        altitudeASL = 0,
         awaitingPatternStart = false
 }
 local statusDirty = false
@@ -335,9 +336,15 @@ end
 local function copyVec3(vec)
         if not vec then return nil end
         if vec.x then
-                return {x = vec.x, y = vec.y, z = vec.z}
+                local copy = {x = vec.x, y = vec.y, z = vec.z}
+                if vec.groundZ ~= nil then copy.groundZ = vec.groundZ end
+                if vec.altitudeAGL ~= nil then copy.altitudeAGL = vec.altitudeAGL end
+                return copy
         end
-        return {x = vec[1] or 0, y = vec[2] or 0, z = vec[3] or 0}
+        local copy = {x = vec[1] or 0, y = vec[2] or 0, z = vec[3] or 0}
+        if vec.groundZ ~= nil then copy.groundZ = vec.groundZ end
+        if vec.altitudeAGL ~= nil then copy.altitudeAGL = vec.altitudeAGL end
+        return copy
 end
 
 local function normalizeAngle(angle)
@@ -357,6 +364,24 @@ local function distance2D(a, b)
         local dx = a.x - b.x
         local dy = a.y - b.y
         return math.sqrt(dx * dx + dy * dy)
+end
+
+local groundRayDirection = vec3(0, 0, -1)
+local groundSampleOffset = 80
+local groundSampleDistance = 320
+
+local function sampleGroundHeight(pos)
+        if not obj or not obj.castRayStatic or not pos then
+                return nil
+        end
+
+        local origin = vec3(pos.x, pos.y, (pos.z or 0) + groundSampleOffset)
+        local hit = obj:castRayStatic(origin, groundRayDirection, groundSampleDistance)
+        if hit and hit > 0 and hit < groundSampleDistance then
+                return origin.z - hit
+        end
+
+        return nil
 end
 
 local function clamp(val, min, max)
@@ -454,23 +479,33 @@ local function applyAxisGuard(output, angle, rate, limit, rateLimit, strength)
         local direction = currentAngle >= 0 and 1 or -1
         local normalizedAngle = math.min(1, (absAngle - limit) / math.max(limit, 1e-3))
         local correction = strength * normalizedAngle
+        local rateExcess = 0
 
         if rateLimit and rateLimit > 0 then
                 local absRate = math.abs(rate or 0)
                 if absRate > rateLimit then
-                        correction = correction + (strength * 0.5) * math.min(1, (absRate - rateLimit) / math.max(rateLimit, 1e-3))
+                        rateExcess = math.min(1, (absRate - rateLimit) / math.max(rateLimit, 1e-3))
+                        correction = correction + (strength * 0.5) * rateExcess
                 end
         end
 
         if correction <= 0 then
-                return output
+                return clamp(output, -1, 1)
         end
 
         if output * direction > 0 then
-                output = output * (1 - math.min(0.85, correction))
+                local suppression = math.min(1, correction + normalizedAngle * 0.5)
+                output = output * (1 - suppression)
         end
 
-        return clamp(output - direction * correction, -1, 1)
+        output = output - direction * correction
+
+        if absAngle > limit * 1.4 then
+                local brake = math.min(1, normalizedAngle * 0.75 + rateExcess * 0.5)
+                output = output - direction * (strength * 0.5 * brake + 0.1 * brake)
+        end
+
+        return clamp(output, -1, 1)
 end
 
 local function applyYawGuard(output, yawError, yawRate, limit, rateLimit, strength)
@@ -644,9 +679,17 @@ local function pushStatus()
         status.rotorRPM = electrics.values.rotorrpm or 0
         local pos = obj and obj.getPosition and obj:getPosition()
         if pos then
-                status.altitude = pos.z or 0
+                local absoluteAltitude = pos.z or 0
+                local ground = sampleGroundHeight(pos)
+                if ground then
+                        status.altitude = math.max(0, absoluteAltitude - ground)
+                else
+                        status.altitude = absoluteAltitude
+                end
+                status.altitudeASL = absoluteAltitude
         else
                 status.altitude = 0
+                status.altitudeASL = 0
         end
         if currentTargetPos then
                 status.target = {currentTargetPos.x, currentTargetPos.y, currentTargetPos.z}
@@ -718,9 +761,11 @@ end
                 resetLiftOrientationTracking(1)
                 local pos = obj and obj.getPosition and obj:getPosition()
                 local planHeading = plan and plan.startHeading or currentTargetHeading
+                local targetAltitude = plan and (plan.altitude or ((plan.homeGround or (pos and pos.z) or 0) + (plan.altitudeAGL or 0))) or (pos and pos.z)
                 if pos then
-                        takeoffAnchor = {x = pos.x, y = pos.y, z = plan and plan.altitude or pos.z}
-                        currentTargetPos = {x = takeoffAnchor.x, y = takeoffAnchor.y, z = plan and plan.altitude or pos.z}
+                        local desiredZ = targetAltitude or pos.z
+                        takeoffAnchor = {x = pos.x, y = pos.y, z = desiredZ}
+                        currentTargetPos = {x = takeoffAnchor.x, y = takeoffAnchor.y, z = desiredZ}
                 end
                 if obj and obj.getRollPitchYaw then
                         local _, _, currentYaw = obj:getRollPitchYaw()
@@ -821,13 +866,14 @@ local function setPatternPlan(newPlan)
                 start = copyVec3(newPlan.start),
                 startHeading = newPlan.startHeading or 0,
                 altitude = newPlan.altitude or (newPlan.start and newPlan.start.z) or 0,
+                altitudeAGL = newPlan.altitudeAGL,
                 speed = newPlan.speed or 10,
                 transitSpeed = newPlan.transitSpeed,
                 holdTime = newPlan.holdTime or holdDuration,
                 finishMode = newPlan.finishMode or "hover",
                 home = newPlan.home and copyVec3(newPlan.home) or copyVec3(newPlan.start),
                 homeHeading = newPlan.homeHeading or newPlan.startHeading or 0,
-                homeGround = newPlan.homeGround or ((newPlan.home and newPlan.home.z) or (newPlan.start and newPlan.start.z) or newPlan.altitude or 0),
+                homeGround = newPlan.homeGround or (newPlan.home and (newPlan.home.groundZ or newPlan.home.z)) or (newPlan.start and (newPlan.start.groundZ or newPlan.start.z)) or newPlan.altitude or 0,
                 landingClearance = newPlan.landingClearance or 0.45,
                 rotorRPM = newPlan.rotorRPM or rotorSpinThreshold,
                 finalHoverPos = newPlan.finalHoverPos and copyVec3(newPlan.finalHoverPos) or copyVec3(newPlan.start),
@@ -836,6 +882,10 @@ local function setPatternPlan(newPlan)
                 totalLength = 0,
                 patternPoints = {}
         }
+
+        if plan.altitudeAGL == nil then
+                plan.altitudeAGL = math.max(0, plan.altitude - (plan.homeGround or 0))
+        end
 
         local previous = copyVec3(newPlan.start)
         previous.z = plan.altitude
@@ -1218,6 +1268,20 @@ local function controlToTarget(dt, context)
         local levelHoldGain = getContextValue(context, "levelHoldGain") or 1.0
         local verticalOnly = horizontalFactor <= 1e-4 or headingHold or verticalHold
 
+        local emergencyRecovery = false
+        local emergencyPitchLimit = pitchGuardLimit and pitchGuardLimit * 1.2 or (maxTilt and maxTilt * 1.2)
+        local emergencyRollLimit = rollGuardLimit and rollGuardLimit * 1.2 or (maxTilt and maxTilt * 1.2)
+        if emergencyPitchLimit and math.abs(pitchSmoothed) > emergencyPitchLimit then
+                emergencyRecovery = true
+        end
+        if emergencyRollLimit and math.abs(rollSmoothed) > emergencyRollLimit then
+                emergencyRecovery = true
+        end
+        if emergencyRecovery then
+                horizontalFactor = 0
+                verticalOnly = true
+        end
+
         local pitchTarget = 0
         local rollTarget = 0
 
@@ -1237,8 +1301,12 @@ local function controlToTarget(dt, context)
         else
                 local accelCorrectionPitch = clamp(accelForward / gravity, -0.18, 0.18)
                 local accelCorrectionRoll = clamp(accelLateral / gravity, -0.18, 0.18)
-                pitchTarget = clamp((-pitchSmoothed * levelHoldGain) - accelCorrectionPitch, -pitchLimit, pitchLimit)
-                rollTarget = clamp((-rollSmoothed * levelHoldGain) + accelCorrectionRoll, -rollLimit, rollLimit)
+                local recoveryGain = levelHoldGain
+                if emergencyRecovery then
+                        recoveryGain = recoveryGain + 1.15
+                end
+                pitchTarget = clamp((-pitchSmoothed * recoveryGain) - accelCorrectionPitch, -pitchLimit, pitchLimit)
+                rollTarget = clamp((-rollSmoothed * recoveryGain) + accelCorrectionRoll, -rollLimit, rollLimit)
         end
 
         if lockHeading and horizontalFactor <= 1e-3 and state ~= states.transitStart then
@@ -1268,6 +1336,11 @@ local function controlToTarget(dt, context)
                 rollRateTarget = clamp(rollRateTarget - rollRate * rollRateGain, -1.8, 1.8)
         end
 
+        if emergencyRecovery then
+                pitchRateTarget = clamp(pitchRateTarget - pitchRate * 0.35, -1.8, 1.8)
+                rollRateTarget = clamp(rollRateTarget - rollRate * 0.35, -1.8, 1.8)
+        end
+
         local pitchOutput = clamp(pitchRatePID:get(pitchRate, pitchRateTarget, dt), -1, 1)
         local rollOutput = clamp(rollRatePID:get(rollRate, rollRateTarget, dt), -1, 1)
 
@@ -1285,6 +1358,10 @@ local function controlToTarget(dt, context)
                 yawRateTarget = clamp(yawRateTarget - yawRate * yawRateGain, -1.5, 1.5)
         end
         yawOutput = clamp(yawRatePID:get(yawRate, yawRateTarget, dt), -1, 1)
+
+        if emergencyRecovery then
+                yawOutput = clamp(yawOutput, -0.5, 0.5)
+        end
 
         local verticalDamping = clamp(-velZRaw * (verticalDampingGain or 0.12), -verticalClamp, verticalClamp)
         local verticalAccelGain = context.verticalAccelDamping or defaultControlContext.verticalAccelDamping or 0
