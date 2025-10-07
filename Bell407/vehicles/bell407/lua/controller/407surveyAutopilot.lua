@@ -187,7 +187,8 @@ stateControlContexts[states.takeoff] = {
         verticalSettleRate = 0.45,
         verticalHorizontalLimit = 0.35,
         verticalYawRateLimit = 0.45,
-        verticalClimbMin = 1.4
+        verticalClimbMin = 1.4,
+        forceVerticalOnly = true
 }
 
 stateControlContexts[states.transitStart] = {
@@ -397,6 +398,50 @@ local function getContextValue(context, key)
         return defaultControlContext[key]
 end
 
+local function asinClamped(value)
+        if value ~= value then return 0 end
+        if value >= 1 then return math.pi * 0.5 end
+        if value <= -1 then return -math.pi * 0.5 end
+        return math.asin(value)
+end
+
+local function readRollPitchYaw()
+        if not obj then return 0, 0, 0 end
+
+        local rollRad, pitchRad
+        if obj.getRollPitchYawRad then
+                rollRad, pitchRad = obj:getRollPitchYawRad()
+        end
+
+        local roll, pitch, yaw
+        if obj.getRollPitchYaw then
+                local r, p, y = obj:getRollPitchYaw()
+                yaw = y or yaw
+                roll = rollRad ~= nil and rollRad or r
+                pitch = pitchRad ~= nil and pitchRad or p
+
+                if roll == nil and r ~= nil then
+                        roll = r
+                end
+                if pitch == nil and p ~= nil then
+                        pitch = p
+                end
+
+                if roll ~= nil and pitch ~= nil and (not obj.getRollPitchYawRad) then
+                        if math.abs(roll) <= 1 and math.abs(pitch) <= 1 then
+                                roll = asinClamped(roll)
+                                pitch = asinClamped(pitch)
+                        end
+                end
+        end
+
+        if yaw == nil and obj.getYaw then
+                yaw = obj:getYaw()
+        end
+
+        return roll or 0, pitch or 0, yaw or 0
+end
+
 local function measureLocalAcceleration(cosYaw, sinYaw, velXRaw, velYRaw, velZRaw, dt)
         local dtSafe = math.max(dt or 0, 1e-3)
         local ax, ay, az
@@ -436,11 +481,11 @@ local function measureLocalAcceleration(cosYaw, sinYaw, velXRaw, velYRaw, velZRa
 end
 
 local function isAttitudeStable(pitchLimit, rollLimit, yawRateLimit)
-        if not obj or not obj.getRollPitchYaw then
+        if not obj then
                 return false
         end
 
-        local roll, pitch = obj:getRollPitchYaw()
+        local roll, pitch = readRollPitchYaw()
         roll = roll or 0
         pitch = pitch or 0
 
@@ -767,8 +812,8 @@ end
                         takeoffAnchor = {x = pos.x, y = pos.y, z = desiredZ}
                         currentTargetPos = {x = takeoffAnchor.x, y = takeoffAnchor.y, z = desiredZ}
                 end
-                if obj and obj.getRollPitchYaw then
-                        local _, _, currentYaw = obj:getRollPitchYaw()
+                if obj then
+                        local _, _, currentYaw = readRollPitchYaw()
                         if currentYaw then
                                 currentTargetHeading = currentYaw
                         else
@@ -1078,7 +1123,7 @@ local function controlToTarget(dt, context)
         if not pos then return end
 
         local velXRaw, velYRaw, velZRaw = getVelocityComponents()
-        local roll, pitch, yaw = obj:getRollPitchYaw()
+        local roll, pitch, yaw = readRollPitchYaw()
 
         local yawSmoothed = yawSmoother:get(yaw, dt)
         local pitchSmoothed = pitchSmoother:get(pitch, dt)
@@ -1192,6 +1237,7 @@ local function controlToTarget(dt, context)
         end
 
         local horizontalFactor = 1
+        local forceVerticalOnly = getContextValue(context, "forceVerticalOnly")
         if context.altitudeFocus and context.altitudeFocus > 0 and context.altitudeRange and context.altitudeRange > 0 then
                 local ratio = math.min(1, math.abs(altitudeError) / context.altitudeRange)
                 horizontalFactor = 1 - ratio * context.altitudeFocus
@@ -1199,6 +1245,10 @@ local function controlToTarget(dt, context)
                 if horizontalFactor < minimum then
                         horizontalFactor = minimum
                 end
+        end
+
+        if forceVerticalOnly then
+                horizontalFactor = 0
         end
 
         local verticalClimbMin = getContextValue(context, "verticalClimbMin")
@@ -1266,7 +1316,7 @@ local function controlToTarget(dt, context)
         end
 
         local levelHoldGain = getContextValue(context, "levelHoldGain") or 1.0
-        local verticalOnly = horizontalFactor <= 1e-4 or headingHold or verticalHold
+        local verticalOnly = horizontalFactor <= 1e-4 or headingHold or verticalHold or forceVerticalOnly
 
         local emergencyRecovery = false
         local emergencyPitchLimit = pitchGuardLimit and pitchGuardLimit * 1.2 or (maxTilt and maxTilt * 1.2)
@@ -1359,6 +1409,10 @@ local function controlToTarget(dt, context)
         end
         yawOutput = clamp(yawRatePID:get(yawRate, yawRateTarget, dt), -1, 1)
 
+        if forceVerticalOnly then
+                yawOutput = clamp(yawOutput, -0.35, 0.35)
+        end
+
         if emergencyRecovery then
                 yawOutput = clamp(yawOutput, -0.5, 0.5)
         end
@@ -1386,10 +1440,10 @@ local function controlToTarget(dt, context)
 end
 
 local function isHeadingAligned(threshold)
-        if not currentTargetHeading or not obj or not obj.getRollPitchYaw then
+        if not currentTargetHeading or not obj then
                 return true
         end
-        local _, _, yaw = obj:getRollPitchYaw()
+        local _, _, yaw = readRollPitchYaw()
         if not yaw then
                 return true
         end
