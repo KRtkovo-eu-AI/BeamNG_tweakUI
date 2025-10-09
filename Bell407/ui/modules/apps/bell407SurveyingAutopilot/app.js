@@ -39,7 +39,8 @@ angular.module('beamng.apps')
         planId: null,
         event: null,
         rotorRPM: 0,
-        altitude: 0
+        altitude: 0,
+        awaitingPatternStart: false
       }
 
       const patternGeometry = {
@@ -198,11 +199,67 @@ angular.module('beamng.apps')
         const xVal = pickCoordinate(source, ['x', 'X', 0, '0', 1, '1'])
         const yVal = pickCoordinate(source, ['y', 'Y', 1, '1', 2, '2'])
         const zVal = pickCoordinate(source, ['z', 'Z', 2, '2', 3, '3'])
-        return {
+        const point = {
           x: toNumber(xVal, 0),
           y: toNumber(yVal, 0),
           z: toNumber(zVal, 0)
         }
+
+        let ground = toNumber(source.groundZ, NaN)
+        if (!Number.isFinite(ground)) {
+          ground = toNumber(source.startGround, NaN)
+        }
+        if (!Number.isFinite(ground)) {
+          ground = toNumber(source.homeGround, NaN)
+        }
+        if (Number.isFinite(ground)) {
+          point.groundZ = ground
+        }
+
+        let altitudeAgl = toNumber(source.altitudeAGL, NaN)
+        if (!Number.isFinite(altitudeAgl)) {
+          altitudeAgl = toNumber(source.altitude, NaN)
+        }
+        if (!Number.isFinite(altitudeAgl) && Number.isFinite(point.groundZ)) {
+          altitudeAgl = point.z - point.groundZ
+        }
+        if (Number.isFinite(altitudeAgl)) {
+          point.altitudeAGL = altitudeAgl
+        }
+
+        return point
+      }
+
+      function withFlightAltitude(point, fallbackZ) {
+        const clone = clonePoint(point)
+        if (!clone) return null
+        let ground = Number.isFinite(clone.groundZ) ? clone.groundZ : undefined
+        if (!Number.isFinite(ground)) {
+          ground = toNumber(point && point.groundZ, NaN)
+          if (Number.isFinite(ground)) {
+            clone.groundZ = ground
+          }
+        }
+        let reference
+        if (Number.isFinite(clone.altitudeAGL)) {
+          reference = clone.altitudeAGL
+        } else if (Number.isFinite(ground)) {
+          reference = (clone.z || ground) - ground
+        } else if (fallbackZ !== undefined) {
+          reference = fallbackZ
+        } else {
+          reference = clone.z || 0
+        }
+        const altitude = toNumber($scope.params && $scope.params.altitude, reference)
+        if (Number.isFinite(altitude)) {
+          clone.altitudeAGL = altitude
+          if (Number.isFinite(clone.groundZ)) {
+            clone.z = clone.groundZ + altitude
+          } else {
+            clone.z = altitude
+          }
+        }
+        return clone
       }
 
       function cloneBounds(source) {
@@ -242,7 +299,8 @@ angular.module('beamng.apps')
         $scope.homePoint = point
 
         if ((!$scope.startPoint && (options ? options.setStartIfMissing !== false : true)) || (options && options.forceStart)) {
-          $scope.startPoint = clonePoint(point)
+          const adjusted = withFlightAltitude(point, point.z)
+          $scope.startPoint = adjusted || clonePoint(point)
         }
 
         if (!options || options.updateStatus !== false) {
@@ -281,6 +339,10 @@ angular.module('beamng.apps')
       }
 
       function updateStatusText() {
+        if ($scope.status.state === 'holding' && $scope.status.awaitingPatternStart) {
+          $scope.statusText = 'Holding at start - press Start survey to begin pattern'
+          return
+        }
         $scope.statusText = stateLabels[$scope.status.state] || ($scope.status.state || 'Unknown')
       }
 
@@ -616,13 +678,19 @@ angular.module('beamng.apps')
         if (!start) return null
         const payload = {
           startPoint: start,
-          altitude: toNumber($scope.params.altitude, start.z || 0),
+          altitude: Math.max(0, toNumber($scope.params.altitude, start.altitudeAGL !== undefined ? start.altitudeAGL : (Number.isFinite(start.groundZ) ? (start.z || 0) - start.groundZ : start.z || 0))),
           angle: toNumber($scope.params.angle, 0),
           length: toNumber($scope.params.length, 0),
           spacing: toNumber($scope.params.spacing, 0),
           rows: Math.max(1, Math.round(toNumber($scope.params.rows, 1))),
           speed: Math.max(0, toNumber($scope.params.speed, 0)),
           finishMode: $scope.params.finishMode || 'hover'
+        }
+        if (Number.isFinite(start.groundZ)) {
+          payload.startPoint.groundZ = start.groundZ
+        }
+        if (Number.isFinite(start.altitudeAGL)) {
+          payload.startPoint.altitudeAGL = start.altitudeAGL
         }
         const transit = toNumber($scope.params.transitSpeed, NaN)
         if (Number.isFinite(transit) && transit >= 0) {
@@ -721,8 +789,13 @@ angular.module('beamng.apps')
         $scope.previewError = null
         const previewWaypoints = toArray(data.waypoints)
         const previewSegments = toArray(data.mapSegments)
+        const altitudeAGL = toNumber(data.altitude, $scope.params.altitude)
         $scope.preview = {
-          altitude: toNumber(data.altitude, $scope.params.altitude),
+          altitude: altitudeAGL,
+          altitudeAGL: altitudeAGL,
+          altitudeASL: toNumber(data.altitudeASL, (Array.isArray(data.start) ? data.start[2] : (data.start && data.start.z)) || 0),
+          startGround: toNumber(data.startGround, (data.start && data.start.groundZ) || NaN),
+          homeGround: toNumber(data.homeGround, (data.home && data.home.groundZ) || NaN),
           speed: toNumber(data.speed, $scope.params.speed),
           finishMode: data.finishMode || $scope.params.finishMode,
           rotorRPM: toNumber(data.rotorRPM, 380),
@@ -786,11 +859,8 @@ angular.module('beamng.apps')
           $scope.$evalAsync(function () {
             $scope.loadingStart = false
             if (result && (result.x || result[1])) {
-              const point = clonePoint(result)
-              if (point && !Number.isFinite(point.z)) {
-                point.z = toNumber($scope.params.altitude, 0)
-              }
-              $scope.startPoint = point
+              const point = withFlightAltitude(result)
+              $scope.startPoint = point || clonePoint(result)
               queuePreview()
               scheduleDraw()
             } else {
@@ -833,6 +903,9 @@ angular.module('beamng.apps')
         if ($scope.installState.status !== 'ready') return false
         if ($scope.pending.start || $scope.pending.arm) return false
         if ($scope.status.armed || $scope.status.state === 'armed') return true
+        if ($scope.status.active) {
+          return !!$scope.status.awaitingPatternStart
+        }
         return !!($scope.startPoint || $scope.homePoint)
       }
 

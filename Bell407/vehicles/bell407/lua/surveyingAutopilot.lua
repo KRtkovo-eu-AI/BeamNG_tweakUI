@@ -299,8 +299,25 @@ local function buildPatternPlan(params)
 		return nil, explicitStart and "invalidStart" or "noTarget"
 	end
 
-        local altitude = params.altitude or startPoint.z or 0
+        local groundZ = startPoint.groundZ or getGroundHeight(startPoint)
+        if not groundZ then
+                groundZ = startPoint.z or 0
+        end
+        local defaultAltitude = (startPoint.z or groundZ) - groundZ
+        local requestedAltitude = tonumber(params.altitude)
+        if requestedAltitude == nil then
+                requestedAltitude = defaultAltitude
+        end
+        if requestedAltitude == nil then
+                requestedAltitude = 0
+        end
+        if requestedAltitude < 0 then
+                requestedAltitude = 0
+        end
+        local altitude = groundZ + requestedAltitude
         startPoint.z = altitude
+        startPoint.groundZ = groundZ
+        startPoint.altitudeAGL = requestedAltitude
 
         local length = params.length or 0
         local spacing = params.spacing or 0
@@ -405,6 +422,9 @@ local function buildPatternPlan(params)
 
         local home = homePosition and copyTable(homePosition) or {x = startPoint.x, y = startPoint.y, z = altitude}
         if not home.z then home.z = altitude end
+        if not home.groundZ then
+                home.groundZ = startPoint.groundZ or groundZ
+        end
 
         local planId = params.planId
         if not planId then
@@ -417,6 +437,7 @@ local function buildPatternPlan(params)
                 start = startPoint,
                 startHeading = firstHeading,
                 altitude = altitude,
+                altitudeAGL = requestedAltitude,
                 speed = speed,
                 transitSpeed = params.transitSpeed,
                 holdTime = holdTime,
@@ -425,7 +446,7 @@ local function buildPatternPlan(params)
                 landingClearance = landingClearance,
                 home = home,
                 homeHeading = firstHeading,
-                homeGround = home.groundZ or home.z,
+                homeGround = home.groundZ or groundZ or home.z,
                 finalHoverPos = finalHover,
                 finalHeading = finalHeading,
                 patternPoints = patternPoints,
@@ -444,9 +465,13 @@ local function buildPatternPlan(params)
 
         local preview = {
                 ok = true,
-                start = {startPoint.x, startPoint.y, startPoint.z},
-                home = {home.x, home.y, home.z},
-                altitude = altitude,
+                start = {startPoint.x, startPoint.y, startPoint.z, x = startPoint.x, y = startPoint.y, z = startPoint.z, groundZ = startPoint.groundZ, altitudeAGL = requestedAltitude},
+                home = {home.x, home.y, home.z, x = home.x, y = home.y, z = home.z, groundZ = home.groundZ},
+                altitude = requestedAltitude,
+                altitudeAGL = requestedAltitude,
+                altitudeASL = altitude,
+                startGround = startPoint.groundZ or groundZ,
+                homeGround = home.groundZ or groundZ,
                 heading = firstHeading,
                 finishMode = finishMode,
                 speed = speed,
